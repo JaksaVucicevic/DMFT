@@ -5,6 +5,8 @@
 
 int main()
 {
+  //samo da vidim dal radi git
+  
   GRID grid("params");
 
   Result result(&grid);

@@ -6,6 +6,7 @@
 int main()
 {
   //samo da vidim dal radi git
+  //proba za push
   
   GRID grid("params");
 

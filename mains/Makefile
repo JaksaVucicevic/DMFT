@@ -7,7 +7,7 @@ main =main_tmt
 # SIAM path
 SP = ../source
 # executable path
-RP = runGeneral
+RP = run
 
 # -----------  SERIAL ------------------------------------#
 

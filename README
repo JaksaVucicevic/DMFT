@@ -1,0 +1,760 @@
+#===============================================================================#
+|                        IPT DMFT Package Documentation				|
+|										|
+|					by Jaksa Vucicevic 2012			|
+|					SCL, Institute Of Physics Belgrade	|
+#===============================================================================#
+
+This code package contains the Second Order Perturbative Single Impurity 
+Andserson Model Solver that is used within the DMFT loop for solving a variety of 
+problems. The codes for solving the Clean Hubbard Model using the IPT method and 
+Disordered Hubbard Model using the TMT approach are also included, as well as a 
+selection of utilities that can be of general use.
+
+The code is written in C++.
+
+FOR IMPATIENT:	To start right away by compiling and running a simple example,
+		scroll to the bottom where you'll find the instructions.
+
+---------------------------------------------------------------------------------
+Files in the package:
+---------------------------------------------------------------------------------
+
+1) routines.h, routines.cpp 
+	- A library of useful routines (such as Trapezoid Integration, 
+	Hybridization Function and DOS initializers) and constants used in the
+	code.
+
+2) Mixer.h
+	- A template class that is used for keeping track and mixing of 
+	consecutive solutions in the DMFT Loop as well as checking for 
+	convergence.
+
+3) Broyden.h, Broyden.cpp
+	- A class containing the Improved Broyden Solver (a generalization
+	of the secant method for finding function roots in multiple dimensions;
+	improved because it memorizes and takes into account all previous
+	iterations when choosing the vector for calculation in the next iteration).
+	It can be used to solve a system of nonlinear equations of the form F(X)=X,
+	where X is an N-dimensional vector.
+
+4) Input.h, Input.cpp
+	- A class used for reading input files following a convention.
+
+5) GRID.h, GRID.cpp
+	- A class used for creating 1D grids for discretization of functions.
+	Also, takes care of interpolation and other grid-dependent routines.
+	
+6) Result.h, Result.cpp, nrutil.h, nrutil.c
+	- A class that contains and manages all the relevant data in the
+	calculation. Includes input data, all the intermediate results and all 
+	the final results. Has methods for printing results to a file and
+	reading data from a file.
+
+7) SIAM.h, SIAM.cpp
+	- A class for solving the Single Impurity Anderson Model. Can solve for
+	a fixed value of either chemical potential or occupation number, but the
+	latter is used only within the CHM solver.
+
+6) Loop.h, Loop.cpp
+	- The base class for DMFT calculations. Contains a flexible DMFT loop
+	with virtual methods for solving SIAM and self-consistency calculation
+	to be overridden for a specific use.
+
+7) CHM.h, CHM.cpp
+	- A class for solving the Clean Hubbard Model. Derived from Loop. 
+	Self-consistency relation can be chosen to be general or Bethe Lattice
+	specific. 
+
+8) TMT.h, TMT.cpp
+	- A class for solving the Disordered Hubbard Model using the Typical 
+	Medium Theory approach. Derived from CHM.
+
+9) main_tmt.cpp, main_chm.cpp, ...
+	- Examples of usage
+
+10) Makefile
+	- Used for compilation
+
+11) params
+	- an example of the input file
+
+---------------------------------------------------------------------------------
+Requirements, Compilation and Running with MPI:
+---------------------------------------------------------------------------------
+
+The code is for now tested only with Intel Compiler. To compile you should have 
+the OpenMPI (or any other) implementation of MPI installed.
+TrapezIntegralMP and SIAM are parallelized with OpenMP and TMT is parallelized 
+with MPI.
+
+Note that OpenMPI mpiCC wrapper script works with g++ by default. To change 
+this type
+
+	$ export OMPI_CXX=icpc
+
+To run a code that uses TMT use:
+
+	$ mpirun -np <Number of processes> 
+                 -machinefile <file with the names of the machines used>
+                 <name of the executable>
+
+In my experience it is best to use one process per machine. So if you have
+only one multicore machine, run it with one process and set the numbers of OpenMP
+threads for different parts of the code to the number of processors.
+Note that AvarageNt and KramarsKronigNt parameters that set the numbers of threads 
+used for geometrical avaraging and Hilbert transform in the TMT procedure, should
+always be set to the number of processors on the master machine, even if more than
+one MPI process is run on that machine. This is because of that when these methods
+are executed, all of the slave processes are idle. SiamNt, or the number of threads
+for SIAM execution should be always set to 
+<Number of processors per machine>/<number of MPI processes per machine>
+
+To compile a code without MPI parallelization, or without any form of parallelization,
+uncomment the appropriate lines in the Makefile. In any case compilation of a 
+main code is done in the same way
+
+	$ make main=<name of the main code without the .cpp extension>
+
+---------------------------------------------------------------------------------
+Usage of classes and functions:
+---------------------------------------------------------------------------------
+
+
+template <T> class Mixer
+===========================
+
+To initialize a Mixer object use for example:
+
+	Mixer <double> mixer(20, 5, (int []) {3,2,1,1,1}, 1e-5);
+
+This means that it can store up to 5 arrays of 20 doubles and that each time Mix
+method is called like this:
+
+        // double a[20] initialized somewhere else
+        bool converged = mixer.Mix(a);
+
+the contents of array "a" are changed so that they are now a linear mix of its contents
+and the contents of the 4 a's previously passed to this method, with coefficients
+3,2,1,1,1 (newer to older). If none of the components of the newly passed array
+differs by more than 1e-5 from the last array's corresponding component, the method
+returns true, else false.
+
+The first array to be passed to Mix method is not being changed in any way 
+	a_1 = a_1
+and the second one is just
+	a_2 = (3*a_2 + 2*a_1)/5
+
+class Broyden
+=============
+
+Initialize a Broyden object:
+
+	Broyden B;
+	B.SetParameters(N, MAX_ITS, 0.99, 0.01, Accr);
+	B.TurnOn(0);
+
+N is the dimension of the problem, MAX_ITS is the maximum allowed number of iterations,
+Accr is the desired accuracy. alpha = 0.99 and omega0 = 0.01 are numerical 
+parameters that should not be changed without understanding of what they're for.
+
+If we have a function 
+
+	void F(complex<double>* X) // result is stored in the input array
+
+and we want to solve for F(X)=X then
+
+        complex<double> X[N];
+        //initialize X
+	for(int it = 1; it<=MAX_ITS; it++)
+        { F(X);
+          int ErrCode = B.CalculateNew(X, it);
+          if (ErrCode != 0) break;
+        }
+        B.TurnOff();
+
+CalculateNew method alters the values in X and returns 1 if convergence is reached 
+(otherwise 0). If an error occured, -1 is returned.
+
+Also, if you function is a method of a class, then you can use:
+
+	template <class T> bool UseBroyden(int N, int MAX_ITS, double Accr, 
+                void (T::*func)(complex<double>*), T* obj, complex<double>* V)
+
+where T is your class, obj is your object, func is the method of your class,
+N is the dimension of the problem, Accr desired accuracy. V is the initial
+guess on input, result on output. This function iterates until maximum number
+of iterations or convergence is reached. If you're using this, you don't need
+a Broyden object, but you need to include this function as a friend function in 
+your class if func is private. For example in class SIAM:
+
+	friend bool UseBroyden(int, int, double, 
+            void (SIAM::*)(complex<double>*), SIAM*, complex<double>*);
+
+class Input
+===========
+
+Initialize Input object like:
+
+	Input input("folder/filename.ext");
+
+If the file is not found an error message will be printed on screen. The parameters
+in the file should have a unique keyword that is to be found in the line with the 
+value of the parameter at the start of the line. For example:
+ 
+	3	IntegerNumberParameter
+	5.4	DoubleNumberParameter
+	T	BooleanParameter
+	1 5 6	ArrayOfIntegersParameter
+
+The input is then used like
+        int a;
+	input.ReadParam(a,"IntegerNumberParameter");
+        double b;
+	input.ReadParam(b,"DoubleNumberParameter");
+        bool c;
+	input.ReadParam(c,"BooleanParameter");
+        int d[3];
+	input.ReadArray(3, d, "ArrayOfIntegersParameter");
+
+Input can read integers, doubles, characters and booleans, as well as arrays of 
+up to 5 integers and doubles. If a parameter keyword is found nowhere in the input file,
+a warning message is printed on screen.
+
+class GRID
+==========
+
+To initialize a GRID object with default parameters use:
+
+	GRID grid;
+
+Otherwise use:
+
+	GRID grid(Nlog, Nlin, omega_lin_max, omega_max, omega_min);
+
+To use parameters from an input file:
+
+	GRID grid("inputFileName");
+
+To create an omega grid using a GRID object use:
+
+	double omega[Nlin+Nlog]; // or 
+	// double omega[grid.get_N()];
+	grid.assign_omega(omega);
+
+where you should pass an initialized double array of length Nlin+Nlog.
+
+If you have a function discretized on omega, you can get an interpolated value
+of this function in any omega like this:
+
+	double a[grid.get_N()];
+        for (int i=0; i<grid.get_N(); i++) 
+	  a[i] = sin(omega[i]);
+        printf("interpolated value in 5.1: %f\n", grid.interpl(a,5.1));
+
+To get the real part of a complex function by KramarsKronig integral:
+
+	complex<double> f[grid.get_N()];
+        //fill in the imaginary part of f, for example to create a non-interacting G
+        for (int i=0; i<grid.get_N(); i++) 
+          f = complex<double>(0.0, - pi * DOS(DOStypes::SemiCircle, 0.5, omega[i]);
+        grid.KramarsKronig(f);
+
+
+class Result
+============
+
+To intialize a Result object you first need a GRID object which defines the
+grid on which all the functions are discretized:
+
+	GRID grid;
+
+Then:
+	
+	Result result(grid);	
+
+After performing calculations you can print all the function to a file:
+
+	result.PrintResult("fileName");
+
+Also, you can copy the contens of a Result object to aonther object:
+
+	Result result2(&grid);
+        result2.CopyFrom(result);
+
+You can also initialize an object as a copy directly (this always works):
+
+	Result result3(result);
+
+Result can also be read from a file:
+
+	Result result4(grid);
+        result4.ReadFromFile("fileName");
+
+Contents of Result object are public and can be accessed directly. For example
+
+	Result result5(grid);
+        grid.assign_omega(result5.omega);
+        InitDelta(DOStypes::SemiCircle, 
+	   grid.get_N(), 0.5, 0.0, 0.01, 0.5, result5.omega, result5.Delta);
+        InitDOS(DOStypes::SemiCircle, 
+	   0.5, grid.get_N(), result5.omega, result5.NIDOS);
+
+class SIAM
+==========
+
+To initialize a SIAM object use:
+
+	SIAM siam;
+
+Then to set parameters and options use:
+
+	siam.SetUTepsilon(double U, double T, double epsilon);
+	siam.SetBroadening(double eta);
+	siam.SetIsBethe(bool isBethe);
+	siam.SetBroydenParameters(int MAX_ITS, double Accr);
+	siam.CheckSpectralWeight = true;
+	siam.UseMPT_Bs = false;
+
+Or you can initialize all theparameters from an input file:
+
+	SIAM siam("inputFileName");
+
+To run it you need a Result object with initialized Delta and info on chemical 
+potential and initial guess for broyden.
+
+	GRID grid("inputFileName");
+	Result result(grid);
+        grid.assign_omega(result.omega);
+        InitDelta(DOStypes::SemiCircle, grid.get_N(), 
+	    0.5, 0.0, 0.01, 0.5, result.omega, result.Delta);
+        result.mu = 0.0;
+	result.mu0 = 0.0;
+
+        siam.Run(result);
+        result.PrintResult("outputFile");
+
+
+In the case of CHM, SIAM is run with fixed occupation number, rather 
+than chemical potential:
+
+	result.n = 0.5; //half-filling
+	siam.Run_CHM(result);
+
+All for-loops in SIAM are parallelized with OpenMP.
+
+class Loop
+==========
+
+Class Loop is not an abstract class, but one should not make inastances of 
+this class. It provides a flexible DMFT loop with several options but the
+SolveSIAM and CalcDelta methods are not implemented. Loop should
+be used as a base class for classes that do DMFT calculations. Physical 
+parameters should be added and SolveSIAM and CalcDelta methods 
+should be overriden.
+
+The options and parameters of DMFT loop are the following:
+
+	int MAX_ITS; // Maximum number of DMFT iterations after which the
+		     // iterating stops and an error code is returned.
+		     // Otherwise, iterating ends when
+	double Accr; // desired accuracy (or the maximum difference between
+		     // corresponding components of two consecutive Delta
+		     // functions) is reached and a success code is returned.
+
+During the execution Loop uses a Mixer object for mixing solutions. The
+parameters of this mixing are set with
+
+	int NtoMix;	// number of previous consecutive Deltas to mix 
+			// (if this number is greater then the number of 
+			// iterations already made, then all the previous 
+			// Deltas are taken into account)
+	int * Coefs;	// Linear coefficients of mixing. Coefs[0] is for
+			// the newest solution, Coefs[NtoMix-1] is for the 
+			// oldest. Notice that when solutions are mixed, 
+			// the difference between consecutive solutions 
+			// appears smaller, and in that case Accr should be
+			// set to an appropriately smaller value.
+			// To not mix solutions at all, set NtoMix = 2
+			// and Coeefs = {1, 0}. At least 2 consecutive 
+			// solutions have to be kept in memory for checking 
+			// convergence.
+
+There is also an option to use Broyden solver to aid convergence. However,
+it should not be used from the start since it can drive Delta away from
+the solution uncontrollably and irreversibly in only a few iterations. Also,
+when Delta is going through a phase transition during DMFT iterations, it is
+common that difference between consecutive solutions first falls off to a 
+small value, but then starts rising again to a certain value before dropping
+again and finally converging. This is a sign that solution has changed its 
+shape drastically during the iterations. In that case, it is very important not to use 
+Broyden before the drastic changing takes place. The parameters regarding this 
+are the following:
+
+	bool UseBroyden;		// set this to true to use broyden.
+	double BroydenStartDiff;	// set this to a value of Diff after which
+					// Broyden mixing is turned on (and Mixer is
+					// turned off).
+	bool ForceBroyden;		// It can be set that if a certain event occurs
+					// (for example Diff is starting to rise, or 
+					// solving SIAM has failed)
+					// Broyden is turned off and Mixer turned on 
+					// again. To not do this in any case set
+					// ForceBroyden to true. This however should not
+					// be done. 
+
+There are two options aimed at a more detailed monitoring of the iterations.
+
+	bool PrintIntermediate;		// If this is set to true, Loop will print
+					// out the current contents of the Result object
+					// to a file named "intermediate.<iteration #>"
+					// after each iteration.
+					// This can be used to view all the intermediate
+					// results (including all relevant functions)
+					// in the order they are being calculated.
+	bool HaltOnIterations;		// If this is set to true, Loop will halt after
+					// the first iteration and promt the user to
+					// enter the ordinal of the iteration after which
+					// the loop will stop again with the same promt.
+					// Every time this happens, the current Result is
+					// printed to a file named "intermediate".
+
+If one is solving a problem for which it is analytically known that it has a symmetric 
+solution, this can be forced by setting Delta(omega) = - conj( Delta(-omega)) at the end
+of each iteration. To do this set
+
+	bool ForceSymmetry;
+ 
+to true. This can be helpful at and very close to the phase transition, where it
+sometimes happens that a very asymmetric solution is obtained (in a way that for omega>0
+the solution appears insulating and for omega<0 metallic).
+
+All these parameters are private and can be set outside of the class methods using
+
+	void SetMixerOptions(int NtoMix, const int * Coefs);
+	void SetBroydenOptions(bool UseBroyden, bool ForceBroyden, double BroydenStartDiff);
+	void SetLoopOptions(int MAX_ITS, double Accr);
+	void SetPrintOutOptions(bool PrintIntermediate, bool HaltOnIterations);
+
+Loop takes care of reading the input file in its Loop::Loop(const char* ParamsFN)
+constructor.
+
+class CHM
+=========
+
+This is a Clean Hubbard Model solver. It is derived from Loop.
+
+The physical parameters are the following:
+
+	double U;	// on-site interaction
+	double T;	// temperature
+	double t;	// hopping amplitude
+
+The occupation number enters as a parameter through the Result object, as well as 
+the initial guess for Delta and mu0.
+
+The numerical parameters are:
+
+	double SIAMeta;	// The amplitude of broadening that is going to be used 
+			// in SIAM. If this parameter is set, it overrides the 
+			// SIAM::eta parameter (possibly present in the input file), 
+			// in the sense that CHM always sets
+			// it to this value. This way one can use different 
+			// broadenings in different instances of CHM.
+	bool UseBethe;	// If set to true, Delta is calculated like Delta = t^2 G.
+			// Otherwise, Delta = omega + mu - Sigma - 1.0/ G
+			// This however affects the way SIAM is calculating G, so this
+			// option overrides the SIAM::IsBethe option (if present
+			// in the input file).
+	int SiamNt;	// Sets the number of OpenMP threads SIAM will use.
+
+An example of CHM usage:
+
+	GRID grid;
+	Result result(&grid);
+	grid.assign_omega(result.omega);
+
+	InitDelta(DOStypes::SemiCircle, grid.get_N(), 0.5, 0.0, 0.01, 0.5, result.omega, result.Delta);
+	InitDOS(DOStypes::SemiCircle, 0.5, grid.get_N(), result.omega, result.NIDOS);
+	result.n = 0.5;
+  
+	CHM chm;
+	chm.SetUseBethe(true);
+	chm.SetSIAMeta(5e-3);
+	chm.Run(&result);
+  
+	result.PrintResult("Result.dat");
+
+Note that the default constructor loads the hard-coded default values for all the 
+parameters. If the CHM::CHM(const char* ParamsFN) is used, the parameters are read
+from the input file and those not present (or unreadable) are set to their default value.
+Also, if an input file is provided, the SIAM object inside the CHM will also load
+its parameters from the same file. However, CHM will override some of them (namely SIAMeta,
+UseBethe, U, T and epsilon).
+
+
+class TMT
+=========
+
+Is the disordered Hubbard model solver that uses the Typical Medium Theory approach.
+TMT class is derived from CHM class. The physical parameters that are added are:
+
+	double W; 		// The width of epsilon distribution
+	int Distribution;	// The type of epsilon distribution (only uniform is 
+				// implemented for now).
+	int Nimp;		// Number of impurities to be used. The epsilons of 
+				// impurities are equally spaced between -W/2 and W/2
+
+The current implementation is only for the Bethe lattice, and CHM::SetUseBethe method 
+is overriden here to not allow setting UseBethe to false.
+
+SolveSIAM is also reimplemented, but CalcDelta is left the same.
+TMT can be run in parallel on multiple machines since it is parallelized with MPI.
+A method
+
+	void Slave(int myrank);
+
+is added that should be run in slave processes. TMT::Run should be used in the 
+master process.
+Since only the master process is "aware" of the status of the DMFT Loop, at the end of
+the calculation one needs to end slave processes by sending them the ExitSignal from
+the master process. This is done using the method:
+
+	void SendExitSignal();
+
+The parameters that set the number of openMP threads that are used for different parts 
+of the code are the following:
+
+	int AverageNt;
+	int SiamNt;
+	int KramarsKronigNt;
+
+An example of TMT usage is provided in examples folder (main_tmt.cpp).
+
+
+
+---------------------------------------------------------------------------------
+TO DO
+---------------------------------------------------------------------------------
+
+Input
+=====
+
+- implement ReadParam for more different data types
+- allow for reading arrays of more than 5 elements
+
+GRID
+====        
+- implement different types of grids, including the purely linear grid with a point
+  at exactly 0.0
+- test the type of grid with linear dw(w)
+- implement non-linear interpolation
+- generalize to multidimensional case (to be used for k-grids, for example)
+
+Result
+======
+
+- implement the true binary memory dump (binary files take less space)
+
+Broyden, SIAM, Loop, CHM, TMT
+=============================
+
+- implement error codes for all types of common errors that will be returned from
+  all the public functions (most importantly SIAM::Run(_CHM), CHM::Run, TMT::Run and UseBroyden)
+
+SIAM, CHM
+=========
+
+- implement handling of the half-filled but assymetric non-interacting DOS case
+
+
+
+
+
+
+
+*************************************************************************************
+
+
+
+
+
+
+------------------------------------------------------------------
+Start right away in 10 easy steps - introduction for the impatient
+------------------------------------------------------------------
+
+
+
+
+
+
+0) You should have two folders - "DMFT/source" and "DMFT/examples". 
+In "source" folder are the source files (.h and .cpp) and this is where the object files (.o) will be stored.
+In "examples" folder you can find several simple examples of main codes that are compiled and run.
+In this folder you can find the Makefile file as well, which is used for compilation. After compiling
+the exectuable is stored in the subfolder "run". In this folder you can also find the "params" file in which
+input parameters are set and which is used by the program at runtime. 
+
+1) Make sure you have a C++ compiler installed. Preferably intel compiler. It should
+be found in the following path, or something similar (if you are using a 64-bit 
+processor architecture):
+
+	/opt/intel/Compiler/11.1/064/bin/intel64/
+
+or
+
+	/opt/intel/bin/
+
+2) To set a path to the compiler in your linux console type, for example:
+
+	$ export PATH=$PATH:/opt/intel/Compiler/11.1/064/bin/intel64/
+	$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/intel/Compiler/11.1/064/lib/intel64/
+
+or add these lines to your ~/.bashrc file and then type
+
+	$ source ~/.bashrc
+
+3) go to the examples folder
+
+	$ cd DMFT/examples
+
+4) the simple example is compiling and running the Clean Hubbard Model solver and to 
+compile it, first type the following:
+
+	$ make clean
+
+This will erase all the object files (*.o) in the current folder and also in the 
+source folder (although there are none currently, this will be useful when you're changing
+compilation options). 
+Open the Makefile in a text editor
+
+	$ gedit Makefile
+
+There are 3 modes of compilation (serial, OpenMP and Hybrid). Make sure that in the 
+Makefile, only the serial mpiCC and FLAGS variables are uncommented.
+
+NOTE: When you change the relative paths of the main code folder and
+the source folder, you have to change it also in the Makefile file (SP variable 
+(SP stands for source path)).
+
+Now compile the code:
+
+	$ make main=main_chm
+
+The argument "main=main_chm" lets gnumake know which one of the main code files to compile.
+The executable named main_chm will now appear in the examples/run folder. If you want 
+to change the folder for your exacutable, edit the Makefile by changing the value for 
+the RP variable (RP stands for run path).
+
+NOTE: compiler will print out warnings about unrecognized pragmas. These will not show
+in case of pareallel compilation.
+
+5) switch to the run folder and open the params file in a text editor, for example
+
+	$ cd run
+	$ gedit params
+
+There you'll find all the parameters of the calculation. Set the following parameters 
+to desired values:
+
+	CHM::U	- Hubbard interaction
+	CHM::T	- Temperature
+	CHM::t	- Hopping amplitude
+	CHM::UseBethe	- Option that sets whether Bethe-specific self-consistency 
+			relation will be used (T for true, F for false)
+        main::n - Occupation number
+
+and so on...
+
+6) Save changes
+
+7) Run the executable
+
+	$ ./main_chm
+
+8) You should see a lot of messages printed to the screen which means the program 
+is running :)
+
+9) When program finishes, you can open gnuplot to check the results that are printed
+to a file named "CHM.U2.000.T0.050" or whatever were the values for U and T that you used.
+
+	gnuplot> plot "CHM.U2.000.T0.050" u 1:17
+
+...will print the Quasi-particle DOS on screen
+
+	gnuplot> plot "CHM.U2.000.T0.050" u 1:15, "CHM.U2.000.T0.050" u 1:16
+
+...will print the real and imaginary parts of the obtained Green's function
+
+	gnuplot> plot "CHM.U2.000.T0.050" u 1:13, "CHM.U2.000.T0.050" u 1:14
+
+...will print the real and imaginary parts of the obtained self-energy
+
+	gnuplot> plot "CHM.U2.000.T0.050" u 1:3, "CHM.U2.000.T0.050" u 1:4
+
+...will print the real and imaginary parts of the obtained hybridization-function.
+
+10) now open the main_chm.cpp file and start exploring the code :) good luck!!
+
+
+
+
+
+
+
+------------------------------------------------------------------
+Additional example: compiling and running TMT on multiple machines
+------------------------------------------------------------------
+0) make sure you have OpenMPI installed and find its path
+
+0.5) add the appropriate lines in your ~./bashrc file, for example:
+
+	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/openmpi-1.2.5/lib/
+	export PATH=$PATH:/opt/openmpi-1.2.5/bin/
+
+and type
+
+	$ source ~/.bashrc
+
+and
+
+	$ export OMP_CXX=icpc
+
+to tell OpenMPI to use icpc instead of g++.
+
+1) in "examples" folder you'll find "main_tmt.cpp" file.
+
+2) in Makefile make sure that the hybrid part is uncommented (and serial and threaded commented)
+Compile:
+
+	$ make clean
+	$ make main=main_tmt
+
+3) edit the "params" file to meet your needs. PAY ATTENTION to the number of threads parameters.
+For example set SiamNt, AvarageNt and KramarsKronigNt to the number of processors your machines
+have.
+
+4) create a machinefile, for example called "cluster" in which you list machines on which
+the program will be run. this has to be done even if you only have one multicore machine.
+
+5) run the code by typing
+
+	$ mpirun -np <Number of machines> -machinefile cluster main_tmt
+
+This way the program will be run with different impurity solvers on different machines, 
+each solving a different subset of impurities. Each impurity solver will be spread on an
+entire machine using the OpenMP threads. Make sure the number of impurities is divisible
+by the number of machines to maximize performance. NEVER run tmt on more machines than
+you have impurities.
+
+NOTE: if you have only one multicore machine, it is better to run TMT without MPI 
+paralellization. To do this, you don't need any of the above. Just uncomment threaded 
+section in the Makefile, compile it and run it as usual:
+
+	$ make clean
+	$ make main=main_tmt
+	$ ./main_tmt
+
+Then, when you check your process in "top", you should see that it runs with, 
+for example, 400% CPU (on a quad-core machine).

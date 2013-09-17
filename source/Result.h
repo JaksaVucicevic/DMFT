@@ -16,6 +16,7 @@ class Result
     GRID* grid;
 
     double n;
+    double n0;
     double mu;
     double mu0;
 
@@ -35,8 +36,16 @@ class Result
     double* DOSmed;		//medium DOS in TMT, can be used as an auxiallry DOS in other cases
 
     void PrintResult(const char* ResultFN);
-    void ReadFromFile(const char* ResultFN);
+    bool ReadFromFile(const char* ResultFN);
     void CopyFrom(const Result &result);
+    void PrintModel(double U, double T);
+    void PrintOnImagAxis(complex<double> * X, int M, double T, const char* FN);
+    double get_ImGiw1(double T);
+    
+    double Conductivity(double T, double mu, int Neps, int Nnu, const char * integrandFN = NULL);
+    double Conductivity(double w, double T, double mu, double Neps, double Nnu, double Nscan);
+    double NIConductivity(double T, double mu, int Neps, int Nnu, const char * integrandFN);
+    void ChargeSusceptibility(double T, double &chi1, double &chi3);
 
   private:
     void Initialize(GRID* grid);

@@ -42,7 +42,7 @@ int main()
 
   // create a CHM object with params set in the input file "params". Those params not found in the input file will be set to their default values
   CHM chm("params");
-//  double T=0.02;
+  double T=0.02;
   //for (double T=0.01; T<0.1; T*=2.0)
 //  for (double U=4.0; U<4.1; U+=0.5)
 //  for (double n=0.5; n<0.9; n+=0.02)

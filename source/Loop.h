@@ -48,6 +48,7 @@ class Loop
     
     bool Run(Result* r);
     
+    void SetForceSymmetry(bool FS);
     void SetGrid(GRID* grid);
     void SetMixerOptions(int NtoMix, const int * Coefs);
     void SetBroydenOptions(bool UseBroyden, bool ForceBroyden, double BroydenStartDiff);

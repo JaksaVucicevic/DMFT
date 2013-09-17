@@ -21,6 +21,14 @@ void SIAM::Defaults()
   MAX_ITS = 100; //default 100
   Accr = 1e-9; //default 1e-9
 
+  // mu0 search
+  max_tries = 2;
+  UseBroydenFormu0 = true; 
+
+  AmoebaScanStart = -2.0;
+  AmoebaScanEnd = 2.0; 
+  AmoebaScanStep = 0.5;
+
   //broadening
   eta = 5e-2;
    
@@ -56,6 +64,11 @@ SIAM::SIAM(const char* ParamsFN)
   input.ReadParam(CheckSpectralWeight, "SIAM::CheckSpectralWeight");
   input.ReadParam(UseMPT_Bs,"SIAM::UseMPT_Bs");
   input.ReadParam(isBethe,"SIAM::isBethe");
+  input.ReadParam(UseBroydenFormu0,"SIAM::UseBroydenFormu0");
+  input.ReadParam(max_tries,"SIAM::max_tries");
+  input.ReadParam(AmoebaScanStart,"SIAM::AmoebaScanStart");
+  input.ReadParam(AmoebaScanEnd,"SIAM::AmoebaScanEnd");
+  input.ReadParam(AmoebaScanStep,"SIAM::AmoebaScanStep");
 }
 
 SIAM::~SIAM()
@@ -152,20 +165,27 @@ bool SIAM::Run(Result* r) //output
     //mu0 and n are known => there's no solving of system of equations
     SolveSiam(V);
   else 
-  { int c = 0;
-    while ( UseBroyden<SIAM>(2, MAX_ITS, Accr, &SIAM::SolveSiam, this, V) != 1 ) 
+  { bool failed = !UseBroydenFormu0;  
+    int c = 0;
+    while ( UseBroydenFormu0 and ( UseBroyden<SIAM>(2, MAX_ITS, Accr, &SIAM::SolveSiam, this, V) != 1 ) )
     { c++;
-      if ( c > sizeof(mu0inits)/sizeof(double) - 1 )
+      if ( (c >= max_tries) or (c >= sizeof(mu0inits)/sizeof(double) - 1 ) )
       {
-        printf("\n\n\n\n==== ERROR ====: SIAM Failed to converge!!!\n\n\n\n");
-        return true;
+        printf("\n\n\n\n==== SIAM ERROR ====: Broyden mu0 search failed to converge. Now switching to amoeba ...\n\n\n\n");
+        failed = true;  
+        break;
       }
       V[0] = mu0inits[c]; 
       V[1] = MPT_B;
       printf("==================== ====================== ========== TRYING new mu0 int!!! c = %d, mu0init = %f\n\n\n",c, mu0inits[c]);
     };
     //use broyden to solve system of two equations
-    
+    if (failed) 
+    {  V[0] = mu0inits[0]; 
+       V[1] = MPT_B;
+  
+       Amoeba(Accr, V); 
+    }
   }
   delete [] V;
   //----------------------------//
@@ -178,6 +198,10 @@ bool SIAM::Run(Result* r) //output
   }
 
   r->mu0 = mu0;
+
+  #pragma omp parallel for
+  for (int i=0; i<N; i++)
+    r->DOS[i] = - imag(r->G[i]) / pi;
 
   return Clipped;
 }
@@ -213,19 +237,35 @@ bool SIAM::Run_CHM(Result* r) //output
     MPT_B0 = 0.0;
     SymmetricCase = true;
   }
+  else mu0 = r->mu0;
 
   //------initial guess---------//
   complex<double>* V = new complex<double>[1];
   V[0] = mu0; //initial guess is always the last mu0. in first DMFT iteration it is 0
   //---------------------------//
-
-  printf("     MPT: B = %fe, B0 = %fe\n", MPT_B, MPT_B0);  
+  if (UseMPT_Bs)  printf("     MPT: B = %fe, B0 = %fe\n", MPT_B, MPT_B0);  
 
   //----------------- CALCULATION ----------------------//
   if (HalfFilling)//and (SymmetricCase))
     get_G0();
   else
-    UseBroyden<SIAM>(1, MAX_ITS, Accr, &SIAM::get_G0, this, V);  
+  { 
+    double initGuesses [] = {-1.0, 1.0, 0.3, -0.3, 0.1, -0.1, 
+                             -0.8, 0.8, -0.6, 0.6, -0.7, 0.7,
+                             -3.0, 3.0, 0.9, -0.9, 0.05, -0.05, 
+                              0.5, -0.5, 0.2, -0.2, 2.0, -2.0};
+    
+    bool converged = false; 
+
+    for (int i=0; i<sizeof(initGuesses)/sizeof(double); i++)
+    {  printf("------ SIAM: trying with init guess: %f\n",real(V[0]));
+       converged = UseBroyden<SIAM>(1, 50, 1e-8, &SIAM::get_G0, this, V);  
+       if (converged) break;
+       else V[0] = initGuesses[i];
+    }
+
+
+  }
 
   printf("    mu0 = %f\n", mu0);
   
@@ -246,9 +286,24 @@ bool SIAM::Run_CHM(Result* r) //output
   }
   else
   { if (isBethe)
-      UseBroyden<SIAM>(1, MAX_ITS, Accr, &SIAM::get_G, this, V);  
+      UseBroyden<SIAM>(1, MAX_ITS, 1e-8, &SIAM::get_G, this, V);  
     else
-      UseBroyden<SIAM>(1, MAX_ITS, Accr, &SIAM::get_G_CHM, this, V);
+    { 
+      double initGuesses [] = {-1.0, 1.0, -0.8, 0.8, -0.6, 0.6, 0.2, -0.2, 2.0, -2.0};
+    
+      bool converged = false; 
+
+      for (int i=0; i<sizeof(initGuesses)/sizeof(double); i++)
+      {  printf("------ SIAM: trying with init guess: %f\n",real(V[0]));
+         converged = UseBroyden<SIAM>(1, MAX_ITS, 1e-8, &SIAM::get_G_CHM, this, V);
+         if ((converged)/*and(!Clipped)*/){ /*Clipped = false;*/ break; }
+         else V[0] = initGuesses[i];
+      }
+
+
+    }
+
+      
   }
   MPT_B = get_MPT_B();
   MPT_B0 = get_MPT_B0();
@@ -348,6 +403,9 @@ void SIAM::get_Ps()
          p1[i][j] = r->Am[j] * grid->interpl(r->Ap, r->omega[j] - r->omega[i]);
          p2[i][j] = r->Ap[j] * grid->interpl(r->Am, r->omega[j] - r->omega[i]);
       }
+
+      //PrintFunc("p1.w%.3f",N,p1,r->omega);
+      //PrintFunc("p2",N,p1,r->omega);
 
       //get Ps by integrating                           
       r->P1[i] = pi * TrapezIntegral(N, p1[i], r->omega);
@@ -569,6 +627,52 @@ void SIAM::SolveSiam(complex<double>* V)
   V[0] = mu0 + (get_n(r->G) - r->n); //we need to satisfy (get_n(G) == n) and 
   V[1] = get_MPT_B();                //                (MPT_B == get_MPT_B())
 }
+
+void SIAM::Amoeba(double accr, complex<double>* V)
+{
+  //x here stands for mu0
+  
+  double x_start = AmoebaScanStart;
+  double x_end   = AmoebaScanEnd;
+  double x_step  = AmoebaScanStep;
+
+  int sign_old=0;
+  double x;
+  for(x=x_start; x<x_end; x+=x_step)
+  {
+    V[0] = x;
+    SolveSiam(V);
+    double x_res=real(V[0]);
+    printf("         mu0: %.15f n(G0)-n(G): %.2le step: %.2le\n",x, x-x_res, x_step);
+
+    if (sign_old==0) { sign_old = int_sign(x-x_res); continue; }
+    int sign = int_sign(x - x_res);
+    if (sign_old!=sign) { x-=x_step; break; }
+   
+  }
+
+  x_step *= 0.5;
+  x += x_step;
+
+  bool converged = false;
+  while(not converged)
+  {
+    V[0] = x;
+    SolveSiam(V);
+    double x_res=real(V[0]);
+    printf("         mu0: %.15f n(G0)-n(G): %.2le step: %le\n",x, x-x_res, x_step);
+    converged = ( abs(x-x_res) < accr );
+    int sign = int_sign(x - x_res);
+    if (sign_old==sign)
+       x_step = abs(x_step);
+    else
+       x_step = -abs(x_step); 
+    x_step *= 0.5;
+    x += x_step;
+  }
+  printf("         --- Amoeba DONE ---\n");
+}
+
 
 
 //================================= ROUTINES =================================//

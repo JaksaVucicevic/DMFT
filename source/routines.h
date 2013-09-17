@@ -12,6 +12,8 @@ const complex<double> ii = complex<double>(0.0,1.0);
 //======================= ROUTINES ==================================//
 
 double sign(double x);
+int int_sign(double x);
+
 double sqr(double x);
 int pow(int base, int exp);
 complex<double> sqr(complex<double> x);
@@ -60,19 +62,23 @@ namespace DOStypes
   const int CubicLattice = 4;
   const int FromFileSymmetric = 5;
   const int FromFile = 6;
+  const int Uniform = 7;
   //add more if needed
 }
 
-double DOS(int DOStype, double t, double om);
+double DOS(int DOStype, double t, double om, double U=0.0);
 
 void WriteCubicDosToFile();
 void ReadDosFromFile(const char* FN, int N, double* omega, double* DOS);
+
+void get_G_from_DOS(int DOStype, double t, int N, double* omega, complex<double>* G, double eta, double U=0.0);
+void get_Sigma_from_G(double t, int N, double* omega, complex<double>* G, complex<double>* Sigma);
 
 complex<double> LS_get_G(int DOStype, double t, complex<double> com);
 void InitG(int DOStype, double t, int N, double* omega, complex<double>* G);
 void InitG(int DOStype, double t, int N, complex<double>* omega, complex<double>* G);
 
-void InitDOS(int DOStype, double t, int N, double* omega, double* dos);
+void InitDOS(int DOStype, double t, int N, double* omega, double* dos, double U=0.0);
 void InitDelta(int DOStype, 
                int N, 
                double V, 

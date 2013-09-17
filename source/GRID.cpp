@@ -1,3 +1,4 @@
+#include <cstdio>
 #include "GRID.h"
 #include "routines.h"
 #include "Input.h"

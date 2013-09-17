@@ -6,6 +6,7 @@
 
 #include <cstdio>
 #include <complex>
+#include <cstdlib>
 
 using namespace std;
 

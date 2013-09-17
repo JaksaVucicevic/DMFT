@@ -108,6 +108,12 @@ void Loop::SetPrintOutOptions(bool PrintIntermediate, bool HaltOnIterations)
   if (HaltOnIterations) printf("-- INFO -- Loop: Halt on iterations set ON\n");
 }
 
+void Loop::SetForceSymmetry(bool FS)
+{
+  ForceSymmetry = FS;
+
+}
+
 //---------------------------------------------------//
 
 bool Loop::Run(Result* r)
@@ -194,7 +200,7 @@ bool Loop::Run(Result* r)
        for (int i = 0; i < N/2 - 1; i++) r->Delta[i] = -conj(r->Delta[N - 1 - i]);
      
 
-
+     printf("   Loop: mixing and checking convergence...\n");
      // now mix and check if converged
      int conv = 0;
      if (BroydenStatus == 1) 

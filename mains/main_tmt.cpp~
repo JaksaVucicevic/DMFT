@@ -3,9 +3,6 @@
 #include "../source/Result.h"
 #include "../source/routines.h"
 #include "../source/Input.h"
-#include <cstdio>
-#include <cstdlib>
-
 
 
 // ifdef compiler directives are used to tell the compiler to ignore a block

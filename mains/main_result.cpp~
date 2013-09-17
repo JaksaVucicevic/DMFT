@@ -5,15 +5,14 @@
 int main()
 {
   // initialize grid. params are read from input file
-  GRID grid(0,500,2.0,0.0,0.0);
+  GRID grid;
 
   // initialize a result object on grid
   Result result(&grid);
 
   // fill in Delta by initializing it to semi-circle
-  InitDOS(DOStypes::Cubic, 0.5, grid.get_N(), result.omega, result.NIDOS)
+  InitDelta(DOStypes::SemiCircle, grid.get_N(), 0.2, 0.0, 0.01, 0.5, result.omega, result.Delta);
 
-  PrintFunc("CubicDos",result.NI
   result.mu = 0.1;
   result.n = 0.5;
   result.mu0 = 0.3; 

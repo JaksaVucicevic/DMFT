@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include "routines.h" 
 
 template <class T> //T may be  float, double, complex<double>
@@ -148,6 +149,11 @@ bool Mixer<T>::CheckConvergence()
       MaxDiff =  abs( X[0][i] - X[1][i] ) ;
   CurrentDiff = MaxDiff;
   printf("--- Mixer: Diff[%d] = %le ---\n", Counter, MaxDiff);
+
+  FILE* diffsFile = fopen("diffs","a");
+  fprintf(diffsFile,"%le\n", MaxDiff);
+  fclose(diffsFile);
+
   if (MaxDiff < Accr) printf("--- Mixer: CONVERGED !!!\n");
   return  (MaxDiff < Accr);
 }

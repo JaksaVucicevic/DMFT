@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <cmath>
 #include <complex>
 #include <iostream>
@@ -116,9 +117,18 @@ void TMT::Avarage(Result** R)
   omp_set_num_threads(AverageNt);
 #endif
 
-  #pragma omp parallel shared(R)
-  { 
-    #pragma omp parallel for 
+  //---- uncomment this to print out all impurity results in each iteration -----//
+  // TODO: make this an option
+  /*printf("TMT::Avarage\n");
+  for (int j=0; j<Nimp; j++)
+  { char FN[50];
+    sprintf(FN,"imp%d",j);
+    R[j]->PrintResult(FN);
+  }
+  */
+
+
+    #pragma omp parallel for shared(R)
     for (int i=0; i<N; i++)
     { 
       double dosi = 0;
@@ -132,7 +142,7 @@ void TMT::Avarage(Result** R)
         dosmedi += R[j]->DOS[i];        
       r->DOSmed[i] = dosmedi/Nimp;    
     }
-  } //end of parallel
+  
 
 #ifdef _OMP
   omp_set_num_threads(KramarsKronigNt);
@@ -234,14 +244,14 @@ void TMT::Slave(int myrank)
 //========================= MPI ===============================//
 bool TMT::SolveSIAM()
 {
-/*  #ifdef _MPI
+  #ifdef _MPI
   printf("---- PARALLEL MPI\n");
   #endif
   
   #ifdef _OMP
   printf("---- PARALLEL OMP\n");
   #endif
-*/
+
 
 #ifdef _MPI 
 
@@ -356,6 +366,7 @@ bool TMT::SolveSIAM()
 
 #else
 
+  printf("TMT SolveSIAM\n");
   bool Error = false;
 
   MakeEgrid();
@@ -372,6 +383,7 @@ bool TMT::SolveSIAM()
      mu0grid[i] = R[i]->mu0;  
   }
 
+  printf("Avagaring...");
   Avarage(R);
 
   // Release Memory
@@ -380,6 +392,8 @@ bool TMT::SolveSIAM()
   delete [] R;
 
   delete [] Egrid;
+
+  printf("Done!\n");
 
   return Error;
 

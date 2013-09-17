@@ -1,3 +1,4 @@
+#include <cstdio>
 #include "CHM.h"
 #include "GRID.h"
 #include "Result.h"

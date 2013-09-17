@@ -18,13 +18,13 @@ RP = ../bin
 
 # ----------- THREADED -----------------------------------# 
 
-mpiCC = icpc #/opt/intel/Compiler/11.1/046/bin/intel64/icpc
-FLAGS =  -D_OMP -openmp #-static-intel
+#mpiCC = icpc #/opt/intel/Compiler/11.1/046/bin/intel64/icpc
+#FLAGS =  -D_OMP -openmp #-static-intel
 
 # -----------  HYBRID ------------------------------------#
 
-#mpiCC = /opt/openmpi-1.6.3/bin/mpicxx
-#FLAGS =  -D_MPI -D_OMP -openmp -static-intel #-fast
+mpiCC = /opt/openmpi-1.6.3/bin/mpicxx
+FLAGS =  -D_MPI -D_OMP -openmp -static-intel #-fast
 
 #---------------------------------------------------------#
 

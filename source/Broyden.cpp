@@ -110,6 +110,12 @@ int Broyden::CalculateNew(complex<double> Vnew[], int it)
          MaxDiff = abs( Vnew[i] - Vold[i] );
      CurrentDiff = MaxDiff;
      printf("    Broyden: Diff = %le\n", MaxDiff);
+
+     FILE* diffsFile = fopen("diffs","a");
+     fprintf(diffsFile,"%le\n", MaxDiff);
+     fclose(diffsFile);
+
+
      if (MaxDiff < Accr) 
      {  printf("    Broyden: !!! Converged !!!\n");
         return 1;

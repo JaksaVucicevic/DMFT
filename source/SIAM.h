@@ -97,6 +97,8 @@ class SIAM
     double AmoebaScanStart;	//before amoeba starts, the equation is solved roughly (with accuracy AmobeScanStep) by scanning from AmoebaScanStart to AmoebaScanEnd.
     double AmoebaScanEnd; 	//make sure AmoebaScanStart and AmoebaScanEnd are far enough apart (when U or W is large).
     double AmoebaScanStep;
+    int AmoebaMaxIts;		//maximum number of Amoeba iterations
+    bool AmoebaForceScanAndPrintOut;	//output n, n0, n-n0 and result when scanning for mu0 candidate
   
   public:
     //------ OPTIONS -------//

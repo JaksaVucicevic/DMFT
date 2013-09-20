@@ -17,6 +17,8 @@ class CHM: public Loop
 
     SIAM* siam;
     double SIAMeta;
+    bool UseSmartSIAMeta;
+
     bool UseBethe;
     int SiamNt;
 
@@ -37,7 +39,7 @@ class CHM: public Loop
     void SetSIAMUseLatticeSpecificG(bool SIAMUseLatticeSpecificG);
 
     void SetUseBethe(bool UseBethe);
-    void SetSIAMeta(double eta);
+    void SetSIAMeta(double eta, bool UseSmartSIAMeta=false);
 
     double get_U() { return U; };
     double get_T() { return T; };

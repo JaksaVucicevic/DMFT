@@ -11,6 +11,8 @@ class Loop
     void Defaults();
     string ParamsFN;
 
+    int Iteration;
+
     Result* r;
 
     GRID* grid;

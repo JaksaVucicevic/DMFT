@@ -27,7 +27,9 @@ void SIAM::Defaults()
 
   AmoebaScanStart = -2.0;
   AmoebaScanEnd = 2.0; 
-  AmoebaScanStep = 0.5;
+  AmoebaScanStep = 0.2;
+  AmoebaMaxIts = 100;
+  AmoebaForceScanAndPrintOut = false;
 
   //broadening
   eta = 5e-2;
@@ -69,6 +71,8 @@ SIAM::SIAM(const char* ParamsFN)
   input.ReadParam(AmoebaScanStart,"SIAM::AmoebaScanStart");
   input.ReadParam(AmoebaScanEnd,"SIAM::AmoebaScanEnd");
   input.ReadParam(AmoebaScanStep,"SIAM::AmoebaScanStep");
+  input.ReadParam(AmoebaMaxIts,"SIAM::AmoebaMaxIts");
+  input.ReadParam(AmoebaForceScanAndPrintOut,"SIAM::AmoebaForceScanAndPrintOut");
 }
 
 SIAM::~SIAM()
@@ -613,7 +617,7 @@ void SIAM::SolveSiam(complex<double>* V)
   //--------------------//
   get_G0();
 
-  r->n = get_n(r->G0);
+  r->n0 = get_n(r->G0);
   MPT_B0 = get_MPT_B0();  
 
   get_As();
@@ -622,9 +626,10 @@ void SIAM::SolveSiam(complex<double>* V)
   get_Sigma();   
   get_G();
 
+  r->n = get_n(r->G);
   //--------------------//
 
-  V[0] = mu0 + (get_n(r->G) - r->n); //we need to satisfy (get_n(G) == n) and 
+  V[0] = mu0 + (r->n - r->n0); //we need to satisfy (get_n(G) == n) and 
   V[1] = get_MPT_B();                //                (MPT_B == get_MPT_B())
 }
 
@@ -638,37 +643,86 @@ void SIAM::Amoeba(double accr, complex<double>* V)
 
   int sign_old=0;
   double x;
-  for(x=x_start; x<x_end; x+=x_step)
+  bool found = false;
+  int try_count = 0;
+  double x_candidate;
+  double x_best=0, diff_best=10e+100;
+  
+  while( (not found) and (try_count<1) ) 
   {
-    V[0] = x;
-    SolveSiam(V);
-    double x_res=real(V[0]);
-    printf("         mu0: %.15f n(G0)-n(G): %.2le step: %.2le\n",x, x-x_res, x_step);
+     FILE* ScanFile;  
+     if (AmoebaForceScanAndPrintOut)
+     {
+       char ScanFN[50];
+       sprintf(ScanFN, "scan.eps%.3f",epsilon);
+       ScanFile = fopen(ScanFN,"w");
+     }
+     for(x=x_start; x<x_end; x+=x_step)
+     {
+       V[0] = x;
+       SolveSiam(V);
+       
+       if (AmoebaForceScanAndPrintOut)
+       {  char FN[50];
+          sprintf(FN,"siam.eps%.3f.mu0_%.3f",epsilon, mu0);
+          r->PrintResult(FN);
+       }
+      
+       double x_res=real(V[0]);
+       printf("         mu0: %.15f n(G0)-n(G): %.2le step: %.2le\n",x, x-x_res, x_step);
 
-    if (sign_old==0) { sign_old = int_sign(x-x_res); continue; }
-    int sign = int_sign(x - x_res);
-    if (sign_old!=sign) { x-=x_step; break; }
-   
+       if (AmoebaForceScanAndPrintOut)
+         fprintf(ScanFile,"%.15le %.15le %.15le %.15le\n", x, x-x_res, r->n, r->n0);
+
+       if (sign_old==0) 
+       { sign_old = int_sign(x-x_res);
+         continue;
+       }
+
+       int sign = int_sign(x - x_res);
+       if (abs(x-x_res) < diff_best) { x_best=x; diff_best = abs(x-x_res); };
+       if ((sign_old!=sign) and (not found))
+       {  x_candidate = x-x_step;
+          found = true; 
+          if (not AmoebaForceScanAndPrintOut) break; 
+       }
+    }
+    try_count++;
+    if (not found) { x_start *=2.0; x_end *= 2.0; x_step *= 2.0; printf("              mu0 candidate NOT found! now scanning a wider range...\n"); }
+    if (AmoebaForceScanAndPrintOut) fclose(ScanFile);
+  } 
+ 
+  
+  if (not found)
+  {  printf("              mu0 candidate NOT found! setting mu0 to to best choice: mu0_best: %f diff: %.2le\n",x_best,diff_best);
+     V[0] = x_best;
+     SolveSiam(V);
   }
-
-  x_step *= 0.5;
-  x += x_step;
-
-  bool converged = false;
-  while(not converged)
+  else
   {
-    V[0] = x;
-    SolveSiam(V);
-    double x_res=real(V[0]);
-    printf("         mu0: %.15f n(G0)-n(G): %.2le step: %le\n",x, x-x_res, x_step);
-    converged = ( abs(x-x_res) < accr );
-    int sign = int_sign(x - x_res);
-    if (sign_old==sign)
-       x_step = abs(x_step);
-    else
-       x_step = -abs(x_step); 
+    printf("              mu0 candidate found! proceeding with aomeba...\n");  
+    x = x_candidate;
     x_step *= 0.5;
     x += x_step;
+
+    bool converged = false;
+    int it = 0;
+    while( (not converged) and (it<=AmoebaMaxIts) )
+    { it ++;
+      V[0] = x;
+      SolveSiam(V);
+      double x_res=real(V[0]);
+      printf("         it: %d mu0: %.15f n(G0)-n(G): %.2le step: %le\n", it, x, x-x_res, x_step);
+      converged = ( abs(x-x_res) < accr );
+      int sign = int_sign(x - x_res);
+      if (sign_old==sign)
+         x_step = abs(x_step);
+      else
+         x_step = -abs(x_step); 
+      x_step *= 0.5;
+      x += x_step;
+    }
+    if (converged) printf("          Amoeba: desired accuracy reached!\n");
   }
   printf("         --- Amoeba DONE ---\n");
 }

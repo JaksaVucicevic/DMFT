@@ -15,6 +15,7 @@ void CHM::Defaults()
     T = 0.05;
     UseBethe = false;
     SIAMeta = 1e-5;
+    UseSmartSIAMeta = false;
     t = 0.5;
     SiamNt = 8;
     siam = new SIAM();
@@ -40,6 +41,7 @@ CHM::CHM(const char* ParamsFN) : Loop(ParamsFN)
   input.ReadParam(T,"CHM::T");
   input.ReadParam(UseBethe,"CHM::UseBethe");
   input.ReadParam(SIAMeta,"CHM::SIAMeta");
+  input.ReadParam(UseSmartSIAMeta,"CHM::UseSmartSIAMeta");
   input.ReadParam(t,"CHM::t");
 
   input.ReadParam(SIAMUseLatticeSpecificG,"CHM::SIAMUseLatticeSpecificG");
@@ -73,9 +75,10 @@ void CHM::SetUseBethe(bool UseBethe)
   this->UseBethe = UseBethe;
 }
 
-void CHM::SetSIAMeta(double SIAMeta)
+void CHM::SetSIAMeta(double SIAMeta, bool UseSmartSIAMeta)
 {
   this->SIAMeta = SIAMeta;
+  this->UseSmartSIAMeta=UseSmartSIAMeta;
 }
 
 void CHM::SetSIAMUseLatticeSpecificG(bool SIAMUseLatticeSpecificG)
@@ -88,7 +91,15 @@ bool CHM::SolveSIAM()
   //SIAM siam;
   siam->SetUTepsilon(U,T,0.0);
   siam->SetIsBethe(UseBethe);
-  siam->SetBroadening(SIAMeta);
+
+  double eta = SIAMeta;
+  if (UseSmartSIAMeta)
+  { if (Iteration>10)
+      eta *= 0.3;
+    if (Iteration>20)
+      eta *= 0.05;
+  }
+  siam->SetBroadening(eta);
   siam->SetUseLatticeSpecificG(SIAMUseLatticeSpecificG, t, LatticeType); 
 #ifdef _OMP
   omp_set_num_threads(SiamNt);

@@ -143,7 +143,7 @@ bool Loop::Run(Result* r)
   //------------ DMFT loop-------------//
   for (int it = 1; it<=MAX_ITS; it++)
   {  printf("--- DMFT Loop Iteration %d ---\n", it);
-     
+     Iteration = it;
     //set accr for siam broyden
     /* siam.SetBroydenParameters(100, (BroydenStatus == 1) ? max(B.CurrentDiff, 1e-6) 
                                                          : min(mixer.CurrentDiff,BroydenStartDiff) );

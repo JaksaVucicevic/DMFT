@@ -168,6 +168,15 @@ bool TMT::DoSIAM(Result* R, double epsilon)
   //SIAM siam;
   siam->SetUTepsilon(U, T, epsilon);
   siam->SetIsBethe(UseBethe);
+
+  double eta = SIAMeta;
+  if (UseSmartSIAMeta)
+  { if (Iteration>10)
+      eta *= 0.3;
+    if (Iteration>20)
+      eta *= 0.05;
+  }
+
   siam->SetBroadening(SIAMeta); 
   //siam.SetBroydenParameters(50, 1e-12);
 

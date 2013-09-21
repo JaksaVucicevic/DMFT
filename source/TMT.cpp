@@ -22,6 +22,7 @@ void TMT::Defaults()
   W = 0.1;
   Distribution = Distributions::Uniform;
   Nimp = 10;
+  UseSymmetricTDOS = false;
   CHM::UseBethe = true;
 
   AverageNt = 8;
@@ -49,6 +50,7 @@ TMT::TMT(const char* ParamsFN) : CHM(ParamsFN)
   input.ReadParam(W,"TMT::W");
   input.ReadParam(Distribution,"TMT::Distribution");
   input.ReadParam(Nimp,"TMT::Nimp");
+  input.ReadParam(UseSymmetricTDOS,"TMT::UseSymmetricTDOS");
   input.ReadParam(AverageNt,"TMT::AverageNt");
   input.ReadParam(SiamNt,"TMT::SiamNt");
   input.ReadParam(KramarsKronigNt,"TMT::KramarsKronigNt");
@@ -107,8 +109,12 @@ double TMT::P(double epsilon)
 void TMT::MakeEgrid()
 {
   Egrid = new double[Nimp];
-  for (int i=0; i<Nimp; i++)
-    Egrid[i] = (W!=0.0) ? - W/2.0 + i * W / ( Nimp - 1.0 ) : 0;
+  if (not UseSymmetricTDOS)
+    for (int i=0; i<Nimp; i++)
+      Egrid[i] = (W!=0.0) ? - W/2.0 + i * W / ( Nimp - 1.0 ) : 0;
+  else
+    for (int i=0; i<Nimp; i++)
+      Egrid[i] = (W!=0.0) ? - W/2.0 + i * 0.5 * W / ( Nimp - 1.0 ) : 0;
 }
 
 void TMT::Avarage(Result** R)
@@ -132,8 +138,12 @@ void TMT::Avarage(Result** R)
     for (int i=0; i<N; i++)
     { 
       double dosi = 0;
-      for (int j=0; j<Nimp; j++)
-        dosi += (1.0/Nimp) * log(R[j]->DOS[i]);        
+      if (not UseSymmetricTDOS)
+        for (int j=0; j<Nimp; j++)
+          dosi += (1.0/Nimp) * log(R[j]->DOS[i]);        
+      else
+        for (int j=0; j<Nimp; j++)
+          dosi += (0.5/Nimp) * ( log(R[j]->DOS[i]) + log(R[j]->DOS[N-1-i]) );        
       r->DOS[i] = exp(dosi);
       r->G[i] = complex<double>(0.0, -pi * r->DOS[i]); 
 

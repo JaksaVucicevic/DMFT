@@ -21,6 +21,7 @@ class TMT : public CHM
     double W;
     int Distribution;
     int Nimp;
+    bool UseSymmetricTDOS;
     double* Egrid;
     double* mu0grid;
 

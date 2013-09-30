@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
 	    grid.assign_omega(result.omega);
           
             // create an initial guess for Delta
-	    InitDelta(DOStypes::SemiCircle, grid.get_N(), 0.5, 0.0, 0.01, 0.25, result.omega, result.Delta);
+	    InitDelta(DOStypes::SemiCircle, grid.get_N(), 0.25, 0.0, 0.01, 0.25, result.omega, result.Delta);
             // NIDOS is not needed for input since tmt only works with bethe-specific self-consistency
     
             // opposite to what is the case with CHM, tmt takes mu as an input parameter, rather than n

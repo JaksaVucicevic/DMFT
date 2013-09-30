@@ -114,7 +114,7 @@ void TMT::MakeEgrid()
       Egrid[i] = (W!=0.0) ? - W/2.0 + i * W / ( Nimp - 1.0 ) : 0;
   else
     for (int i=0; i<Nimp; i++)
-      Egrid[i] = (W!=0.0) ? - W/2.0 + i * 0.5 * W / ( Nimp - 1.0 ) : 0;
+      Egrid[i] = (W!=0.0) ?  i * 0.5 * W / ( Nimp - 1.0 ) : 0;
 }
 
 void TMT::Avarage(Result** R)

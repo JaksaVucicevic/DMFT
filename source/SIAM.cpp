@@ -617,12 +617,14 @@ void SIAM::SolveSiam(complex<double>* V)
   //--------------------//
   get_G0();
 
-  r->n0 = get_n(r->G0);
+  r->n0 = get_n(r->G0); 
   MPT_B0 = get_MPT_B0();  
 
   get_As();
   get_Ps();
   get_SOCSigma();
+  
+  r->n = r->n0; 
   get_Sigma();   
   get_G();
 

@@ -123,6 +123,8 @@ class SIAM
     
     //get G on inamginary axis
     void GetGfOnImagAxis(int Nmax, complex<double>* G_out);
+
+    static void get_G_from_Sigma(Result* r);
     
     //--------RUN SIAM--------//
     

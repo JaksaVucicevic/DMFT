@@ -45,7 +45,7 @@ class TMT : public CHM
     ~TMT();
 
     void SetWDN(double W, int Distribution, int Nimp);
-    void SetUseBethe(bool UseBethe);
+    //void SetUseBethe(bool UseBethe);
     double get_W() { return W; };
  
     bool SolveSIAM();

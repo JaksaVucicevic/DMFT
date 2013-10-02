@@ -23,7 +23,7 @@ void TMT::Defaults()
   Distribution = Distributions::Uniform;
   Nimp = 10;
   UseSymmetricTDOS = false;
-  CHM::UseBethe = true;
+  //CHM::UseBethe = true;
 
   AverageNt = 8;
   SiamNt = 1;
@@ -77,12 +77,13 @@ void TMT::SetWDN(double W, int Distribution, int Nimp)
   mu0grid = new double[Nimp];
   for (int i = 0; i<Nimp; i++) mu0grid[i] = 0;
 }
-
+/*
 void TMT::SetUseBethe(bool UseBethe)
 {
   printf("-- INFO -- TMT: Must use Bethe lattice in TMT\n");
 
 }
+*/
 
 void TMT::SendExitSignal()
 {
@@ -146,7 +147,7 @@ void TMT::Avarage(Result** R)
           dosi += (0.5/Nimp) * ( log(R[j]->DOS[i]) + log(R[j]->DOS[N-1-i]) );        
       r->DOS[i] = exp(dosi);
       r->G[i] = complex<double>(0.0, -pi * r->DOS[i]); 
-
+       
       double dosmedi = 0; 
       for (int j=0; j<Nimp; j++)
         dosmedi += R[j]->DOS[i];        
@@ -159,6 +160,15 @@ void TMT::Avarage(Result** R)
 #endif
 
   r->grid->KramarsKronig(r->G);
+
+  #pragma omp parallel for
+  for (int i=0; i<N; i++) 
+    r->Sigma[i] = r->omega[i] + r->mu - 1.0/r->G[i] - r->Delta[i];
+
+  if (not UseBethe) 
+  {  SIAM::get_G_from_Sigma(r);
+     printf("     TMT: General self-consistency !!! \n");
+  }
 }
 
 void TMT::PrepareResult(Result* R, double mu, double mu0, double* ReDelta, double* ImDelta)

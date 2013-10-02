@@ -193,7 +193,7 @@ bool SIAM::Run(Result* r) //output
   }
   delete [] V;
   //----------------------------//
-  
+
   //output spectral weight if optioned
   if (CheckSpectralWeight)
   {
@@ -202,6 +202,8 @@ bool SIAM::Run(Result* r) //output
   }
 
   r->mu0 = mu0;
+  printf("        SIAM: mu0 = %f, n = %f\n",r->mu0, r->n);
+
 
   #pragma omp parallel for
   for (int i=0; i<N; i++)
@@ -732,6 +734,59 @@ void SIAM::Amoeba(double accr, complex<double>* V)
 
 
 //================================= ROUTINES =================================//
+
+void SIAM::get_G_from_Sigma(Result* r)
+{ 
+  int N = r->grid->get_N();
+  complex<double>** g = new complex<double>*[N];
+  #pragma omp parallel for
+  for (int i=0; i<N; i++) 
+  {
+      
+    //treat integrand carefully 
+    double D = 0.0;
+    complex<double> LogTerm = 0.0;
+    if (abs(imag(r->Sigma[i]))<0.1)
+    {
+      D = r->grid->interpl(r->NIDOS, r->mu + r->omega[i] - real(r->Sigma[i]));
+      LogTerm = complex<double>(D, 0.0) * log( (r->mu + r->omega[i] - r->Sigma[i] + r->omega[N-1])
+                                              /(r->mu + r->omega[i] - r->Sigma[i] - r->omega[N-1]) );
+    }
+
+    //create integrand array
+    g[i] = new complex<double>[N];  
+    for (int j=0; j<N; j++)
+      g[i][j] = complex<double>(r->NIDOS[j] - D, 0.0) 
+             / ( r->mu + r->omega[i] - r->omega[j] - r->Sigma[i] ); 
+
+    /*if (i % 20 == 0) 
+    { complex<double>* denom = new complex<double>[N];  
+      for (int j=0; j<N; j++)
+        denom[j] = 1.0 / ( r->mu + r->omega[i] - r->omega[j] - r->Sigma[i] ); 
+
+      char denomFN[100];
+      sprintf(denomFN,"denom.w%.3f",r->omega[i]);
+      PrintFunc(denomFN, N, denom, r->omega);
+
+      char integFN[100];
+      sprintf(integFN,"integ.w%.3f",r->omega[i]);
+      PrintFunc(integFN, N, g[i], r->omega);
+
+      delete [] denom;
+    }
+  */
+    //integrate to get G 
+    r->G[i] = TrapezIntegral(N, g[i], r->omega) + LogTerm ; 
+
+    delete [] g[i];
+  }
+  
+  delete [] g;    
+
+
+}
+
+
 
 //-----------------------Miscellaneous---------------------------------//
 

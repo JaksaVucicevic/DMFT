@@ -86,8 +86,8 @@ T		|	TMT::UseSymmetricTDOS		// if set to true, only negative epsilons are used a
 
 5		|	LambdaCalculator::continued_Nlambdas	//these parameters are the same as above, but for the function obtained from the continuation of input to the imaginary axis
 1 2 5 20 -1	|	LambdaCalculator::continued_Nfreqs
-5		|	LambdaCalculator::continued_Ndiffs
-1 2 5 20 -1	|	LambdaCalculator::continued_is
+7		|	LambdaCalculator::continued_Ndiffs
+1 2 3 4 5 6 -1	|	LambdaCalculator::continued_is
 
 #		|	LambdaCalculator::returned_Nfreq	// these determine what will be returned from LambdaCalculator::CalculateLambda(..)
 #		|	LambdaCalculator::returned_FromContinued

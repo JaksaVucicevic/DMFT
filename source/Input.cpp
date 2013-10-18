@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <string>
 #include <iostream>
+#include <sstream>
 #include "Input.h"
 using namespace std;
 
@@ -26,7 +27,7 @@ void Input::SetInputFN(const char* InputFN)
      fclose(InputFile);
   }
 }
-
+/*
 int Input::ReadArray(int N, double* Param, const char* ParamName)
 {
   char* line = ReadParam(ParamName);
@@ -75,6 +76,31 @@ int Input::ReadArray(int N, int* Param, const char* ParamName)
      return -1;    
   }
   return 0;
+}*/
+
+template <typename T> int Input::ReadArray(int N, T* Param,const char* ParamName)
+{
+  char* line = ReadParam(ParamName);
+  if (line==NULL) return -1;
+  stringstream ss;
+  ss << line;
+  for(int i = 0; i < N; i++)
+    ss >> Param[i];
+  return 0;
+}
+
+int Input::ReadArray(int N, double* Param, const char* ParamName)
+{
+  int Err;
+  Err = ReadArray<double>(N, Param, ParamName);
+  return Err;
+}
+
+int Input::ReadArray(int N, int* Param, const char* ParamName)
+{
+  int Err;
+  Err = ReadArray<int>(N, Param, ParamName);
+  return Err;
 }
 
 int Input::ReadParam(int& Param, const char* ParamName)
@@ -110,6 +136,16 @@ int Input::ReadParam(char& Param, const char* ParamName)
 
   Param = line[0]; 
   return 0;
+}
+
+int Input::ReadParam(char* Param, const char* ParamName)
+{
+  char* line = ReadParam(ParamName);
+  if (line==NULL) return -1;
+
+  sscanf(line,"%s",Param);
+  return 0;
+
 }
 
 int Input::ReadParam(bool& Param, const char* ParamName)

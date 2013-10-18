@@ -4,6 +4,7 @@
 #include "Input.h"
 #include "GRID.h"
 #include "Loop.h"
+#include "LambdaCalculator.h"
 
 void Loop::Defaults()
 {
@@ -26,6 +27,8 @@ void Loop::Defaults()
     PrintIntermediate = false;
     HaltOnIterations = false;
     ForceSymmetry = false;
+
+    LC = new LambdaCalculator;
 }
 
 Loop::Loop()
@@ -58,12 +61,15 @@ Loop::Loop(const char* ParamsFN)
   input.ReadParam(ForceSymmetry,"Loop::ForceSymmetry");
   
   printf("HOI: %s PI: %s\n", (HaltOnIterations) ? "yes" : "no", (PrintIntermediate) ? "yes" : "no");
+
+  LC = new LambdaCalculator(ParamsFN);
 }
 
 void Loop::ReleaseMemory()
 {
   printf("Loop release\n");
   delete [] Coefs;
+  LC->~LambdaCalculator(); 
 }
 
 Loop::~Loop()
@@ -134,7 +140,13 @@ bool Loop::Run(Result* r)
   // Broyden status: 0 - Waiting for mixer to reach BroydenStartDiff
   //                 1 - Running
   //                 2 - Suspended
-  
+
+  //-------LambdaCalculatorPrepare------//  
+  LC->ResetCounter();
+  LC->SetOmega(r->omega); 
+  LC->SetN(N);
+  LC->SetOffset(N/2);
+
 
   //Halt on first iteration if HaltOnIterations
   int Halt = (HaltOnIterations) ? 1 : 0; 
@@ -214,6 +226,9 @@ bool Loop::Run(Result* r)
          } 
          else conv = 1;
      }
+
+     LC->CalculateLambda(r->Delta);
+     
      if (conv==1) { converged = true; break; }
   }
   //-----------------------------------//

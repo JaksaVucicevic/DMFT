@@ -30,8 +30,8 @@ FLAGS =  -D_OMP -openmp #-static-intel
 
 LIBS =# use this if needed 
 
-all : $(OP)/$(main).o $(OP)/TMT.o $(OP)/CHM.o $(OP)/CHM2.o $(OP)/Loop.o $(OP)/SIAM.o $(OP)/SIAM2.o $(OP)/Result.o $(OP)/GRID.o $(OP)/Input.o $(OP)/Broyden.o $(SP)/Broyden.h $(SP)/Mixer.h $(OP)/routines.o $(OP)/nrutil.o
-	$(mpiCC) $(FLAGS) -o $(RP)/$(main) $(LIBS) $(OP)/$(main).o  $(OP)/TMT.o $(OP)/CHM.o $(OP)/CHM2.o $(OP)/Loop.o $(OP)/SIAM.o $(OP)/SIAM2.o $(OP)/Result.o $(OP)/GRID.o $(OP)/Input.o $(OP)/Broyden.o $(OP)/routines.o $(OP)/nrutil.o
+all : $(OP)/$(main).o $(OP)/TMT.o $(OP)/CHM.o $(OP)/CHM2.o $(OP)/Loop.o $(OP)/SIAM.o $(OP)/SIAM2.o $(OP)/LambdaCalculator.o $(OP)/Result.o $(OP)/GRID.o $(OP)/Input.o $(OP)/Broyden.o $(SP)/Broyden.h $(SP)/Mixer.h $(OP)/routines.o $(OP)/nrutil.o
+	$(mpiCC) $(FLAGS) -o $(RP)/$(main) $(LIBS) $(OP)/$(main).o  $(OP)/TMT.o $(OP)/CHM.o $(OP)/CHM2.o $(OP)/Loop.o $(OP)/SIAM.o $(OP)/SIAM2.o $(OP)/LambdaCalculator.o $(OP)/Result.o $(OP)/GRID.o $(OP)/Input.o $(OP)/Broyden.o $(OP)/routines.o $(OP)/nrutil.o
 
 # main program
 $(OP)/$(main).o : $(main).cpp $(SP)/TMT.h $(SP)/CHM.h $(SP)/CHM2.h $(SP)/SIAM.h $(SP)/SIAM2.h $(SP)/Result.h $(SP)/GRID.h
@@ -60,6 +60,11 @@ $(OP)/SIAM.o : $(SP)/SIAM.cpp $(SP)/SIAM.h $(SP)/Broyden.h $(SP)/Result.h $(SP)/
 # SIAM2
 $(OP)/SIAM2.o : $(SP)/SIAM2.cpp $(SP)/SIAM2.h $(SP)/Broyden.h $(SP)/Result.h $(SP)/GRID.h $(SP)/Input.h $(SP)/routines.h
 	$(Cpp) $(FLAGS) -c -o $@ $(SP)/SIAM2.cpp
+
+# LambdaCalculator
+$(OP)/LambdaCalculator.o : $(SP)/LambdaCalculator.cpp $(SP)/LambdaCalculator.h $(SP)/Input.h $(SP)/routines.h 
+	$(Cpp) $(FLAGS) -c -o $@ $(SP)/LambdaCalculator.cpp
+
 
 # Result
 $(OP)/Result.o : $(SP)/Result.cpp $(SP)/Result.h $(SP)/GRID.h

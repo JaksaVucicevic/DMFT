@@ -76,6 +76,7 @@ void TMT::SetWDN(double W, int Distribution, int Nimp)
   delete [] mu0grid;
   mu0grid = new double[Nimp];
   for (int i = 0; i<Nimp; i++) mu0grid[i] = 0;
+
 }
 /*
 void TMT::SetUseBethe(bool UseBethe)
@@ -187,8 +188,8 @@ bool TMT::DoSIAM(Result* R, double epsilon)
   //SIAM siam(ParamsFN.c_str());
   //SIAM siam;
   siam->SetUTepsilon(U, T, epsilon);
-  siam->SetIsBethe(UseBethe);
-
+  //siam->SetIsBethe(UseBethe);
+  siam->SetIsBethe(true);
   double eta = SIAMeta;
   if (UseSmartSIAMeta)
   { if (Iteration>10)
@@ -197,7 +198,7 @@ bool TMT::DoSIAM(Result* R, double epsilon)
       eta *= 0.05;
   }
 
-  siam->SetBroadening(SIAMeta); 
+  siam->SetBroadening(eta); 
   //siam.SetBroydenParameters(50, 1e-12);
 
   return siam->Run(R);

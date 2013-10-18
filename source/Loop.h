@@ -2,6 +2,7 @@
 
 class Result;
 class GRID;
+class LambdaCalculator;
 
 using namespace std;
 
@@ -16,6 +17,7 @@ class Loop
     Result* r;
 
     GRID* grid;
+
     int N;
 
     //---- Broyden options ----//
@@ -56,4 +58,7 @@ class Loop
     void SetBroydenOptions(bool UseBroyden, bool ForceBroyden, double BroydenStartDiff);
     void SetLoopOptions(int MAX_ITS, double Accr);
     void SetPrintOutOptions(bool PrintIntermediate, bool HaltOnIterations);
+
+    //------------------------------//
+    LambdaCalculator* LC;
 };

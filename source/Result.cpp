@@ -267,15 +267,20 @@ double Result::NIConductivity(double T, double mu, int Neps, int Nnu, const char
   return 2.0 * pi * sum * dnu ;
 }
 
+
+
 double Result::Conductivity(double T, double mu, int Neps, int Nnu, const char * integrandFN)
+//--------------------- DC CONDUCTIVITY --------------------------// Neps,Nnu ~ 400 or 800
 {
   FILE* integrandFile;
   if (integrandFN!=NULL)
     integrandFile = fopen(integrandFN,"w");
 
   double sum = 0.0;
-  double k = 20.0; 
-  double W = 10.0;
+  
+  double k = 20.0;		//determines the nu range
+  double W = 10.0;		//determines the epsilon range
+  double NIDOS_EDGE = 1.0;	//edge of the non-interacting band
 
   //double dnu = 2.0 * k * T / (double) Nnu;
   //for (double nu = -k*T; nu < k*T; nu += dnu )
@@ -296,13 +301,13 @@ double Result::Conductivity(double T, double mu, int Neps, int Nnu, const char *
     double eps_center = nu+mu-real(Sigma_nu);
     double eps_start=eps_center-W*abs(imag(Sigma_nu)); 
     double eps_end=eps_center+W*abs(imag(Sigma_nu));
-    if (eps_start < -1.0) eps_start = -1.0;
-    if (eps_end > 1.0)    eps_end = 1.0;
+    if (eps_start < -NIDOS_EDGE) eps_start = -1.0;
+    if (eps_end > NIDOS_EDGE)    eps_end = 1.0;
     double deps = (eps_end-eps_start) / Neps ;
     for (double eps = eps_start; eps < eps_end; eps += deps )
     { 
-      double v = (abs(eps)>=1.0) ? 0.0 : 1.0;//sqrt( (1.0-sqr(eps))/3.0 );
-      double rho0 = (abs(eps)>=1.0) ? 0.0 : grid->interpl(NIDOS,eps);
+      double v = (abs(eps)>=NIDOS_EDGE) ? 0.0 : 1.0;//sqrt( (1.0-sqr(eps))/3.0 );
+      double rho0 = (abs(eps)>=NIDOS_EDGE) ? 0.0 : grid->interpl(NIDOS,eps);
  
       complex<double> G = 1.0/( nu + mu - eps - Sigma_nu);
       double rho = - imag(G) / pi;

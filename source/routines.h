@@ -50,6 +50,7 @@ void MultiplyByMatrix(int N, double* v, double** m);
 void CreateRotationMatrix(double** m, int N, double angle, int* plane);
 void RotateVector(int N, double* v, double angle, int* plane);
 void RotateVector2D(double* v, double angle);
+void InvertMatrix(int N, double** A, double** invA, double &det);
 
 //==================== DOSes and Init Deltas ========================//
 

@@ -40,10 +40,12 @@ class Result
     void CopyFrom(const Result &result);
     void PrintModel(double U, double T);
     void PrintOnImagAxis(complex<double> * X, int M, double T, const char* FN);
+    static void PrintCondOnImagAxis(int N, double* X, double* w, int M, double T, const char* FN);
     double get_ImGiw1(double T);
     
+    double getIntegrand(double w, double T, double mu, double nu, double eps, complex<double> Sigma_nu,complex<double> Sigma_nu_plus_w);
     double Conductivity(double T, double mu, int Neps, int Nnu, const char * integrandFN = NULL);
-    double Conductivity(double w, double T, double mu, double Neps, double Nnu, double Nscan);
+    double Conductivity(double w, double T, double mu, double Neps, double Nnu, const char * integrandFN = NULL);
     double NIConductivity(double T, double mu, int Neps, int Nnu, const char * integrandFN);
     void ChargeSusceptibility(double T, double &chi1, double &chi3);
 

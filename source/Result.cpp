@@ -274,33 +274,37 @@ double Result::Conductivity(double T, double mu, int Neps, int Nnu, const char *
     integrandFile = fopen(integrandFN,"w");
 
   double sum = 0.0;
-  double k = 12.0; 
+  double k = 20.0; 
+  double W = 10.0;
 
   //double dnu = 2.0 * k * T / (double) Nnu;
   //for (double nu = -k*T; nu < k*T; nu += dnu )
  
-  double nu_start = -3.0;
-  double nu_end = 3.0;
+  double nu_start = -k*T;
+  double nu_end = k*T;
 
   double dnu = (nu_end-nu_start)/ (double) Nnu;
  
   for (double nu = nu_start; nu < nu_end; nu += dnu )
   { 
-    complex<double> Sig = grid->interpl(Sigma,nu) ;
-    double eps_start = nu + mu - real(Sig) - 10.0*abs(imag(Sig));
-    if (eps_start<-1.0) eps_start = -1.0;
-    double eps_end = nu + mu - real(Sig) + 10.0*abs(imag(Sig));
-    if (eps_end>1.0) eps_end = 1.0;
-    //if ( (eps_start>1.0) or (eps_end<-1.0) ) continue;
-    eps_start=-1.0; eps_end=1.0;
+    //---------- ONLY FOR INSULATOR -----------//
+    //if (abs(nu)<0.1)
+    //  continue;
+    //-----------------------------------------//
 
-    double deps = (eps_end-eps_start) / (double) Neps ;
+    complex<double> Sigma_nu=grid->interpl(Sigma,nu);
+    double eps_center = nu+mu-real(Sigma_nu);
+    double eps_start=eps_center-W*abs(imag(Sigma_nu)); 
+    double eps_end=eps_center+W*abs(imag(Sigma_nu));
+    if (eps_start < -1.0) eps_start = -1.0;
+    if (eps_end > 1.0)    eps_end = 1.0;
+    double deps = (eps_end-eps_start) / Neps ;
     for (double eps = eps_start; eps < eps_end; eps += deps )
     { 
-      double v = (abs(eps)>=1.0) ? 0.0 : sqrt( (1.0-sqr(eps))/3.0 );
+      double v = (abs(eps)>=1.0) ? 0.0 : 1.0;//sqrt( (1.0-sqr(eps))/3.0 );
       double rho0 = (abs(eps)>=1.0) ? 0.0 : grid->interpl(NIDOS,eps);
  
-      complex<double> G = 1.0/( nu + mu - eps - Sig);
+      complex<double> G = 1.0/( nu + mu - eps - Sigma_nu);
       double rho = - imag(G) / pi;
       double fprim = 1.0 / ( 4.0 * T * sqr( cosh( nu/(2.0*T) 
                                                 ) 
@@ -319,68 +323,97 @@ double Result::Conductivity(double T, double mu, int Neps, int Nnu, const char *
 }
 
 
-double Result::Conductivity(double w, double T, double mu, double Neps, double Nnu, double Nscan)
+double Result::getIntegrand(double w, double T, double mu, double nu, double eps, complex<double> Sigma_nu,complex<double> Sigma_nu_plus_w)
 {
-//  double n = 100.0;
-//  double k = 10.0;
-  double sum = 0.0;
-  //char integrandFN[100];
-  //sprintf(integrandFN, "integrand.U%.3f.T%.3f",2.0*mu,T);
-  //FILE* integrandFile = fopen(integrandFN,"w");
-  double k=5.0;
-  double nu = k*T/2.0;
-  double eps_max = 0.0;
-  double rho_max = 0.0;
-  /*for (double eps = -1.0; eps < 1.0; eps += 2.0 / Nscan )
-  {
-    complex<double> G = 1.0/( nu + mu - eps - grid->interpl(Sigma,nu) );
-    double rho = - imag(G) / pi;
-    
-    if (rho_max < rho) { rho_max = rho; eps_max = eps; }
-  }
-  double halfWidth=0;
-  for (double eps = -1.0; eps < 1.0; eps += 2.0 / Nscan )
-  {
-    complex<double> G = 1.0/( nu + mu - eps - grid->interpl(Sigma,nu) );
-    double rho = - imag(G) / pi;
-    
-    if (rho_max < 100*rho) { halfWidth = abs(eps_max-eps); break; } 
-  }
-
-  double angle = nu/eps_max;
-
-  if (angle<0) k = 12.0; 
-  printf("rho_max: %f eps_max: %f angle: %f halfWidth: %f\n",rho_max, eps_max, angle, halfWidth);
-*/
-  k=10.0; 
-  double dnu = 2.0 * k * T / Nnu;
-  for (double nu = -k*T; nu < k*T; nu += dnu )
-  { 
-    double eps_start = -1.0;
-    double eps_end = 1.0;
-    //double eps_start = nu/angle - halfWidth;
-    //double eps_end = nu/angle + halfWidth;
-    //if ((eps_start < -1.0)or(angle<0)) eps_start = -1.0;
-    //if ((eps_end > 1.0)or(angle<0)) eps_end = 1.0;
-    double deps = (eps_end-eps_start) / Neps ;
-    for (double eps = eps_start; eps < eps_end; eps += deps )
-    { 
-      double v = sqrt( (1.0-sqr(eps))/3.0 );
+      double v = 1.0;//sqrt( (1.0-sqr(eps))/3.0 );
       double rho0 = grid->interpl(NIDOS,eps);
  
-      complex<double> G = 1.0/( nu + mu - eps - grid->interpl(Sigma,nu) );
-      complex<double> Gw = 1.0/( nu + w + mu - eps - grid->interpl(Sigma,nu) );
+      complex<double> G = 1.0/( nu + mu - eps - Sigma_nu );
+      complex<double> Gw = 1.0/( nu + w + mu - eps - Sigma_nu_plus_w );
       double rho = - imag(G) / pi;
       double rhow = - imag(Gw) / pi;
       double fnu = 1.0 / (1.0 + exp(nu/T));
       double fnuw = 1.0 / (1.0 + exp((nu+w)/T));
       double integrand = rho0 * rho * rhow * sqr(v) * (fnu-fnuw)/w;
+      return integrand;
+}
+
+double Result::Conductivity(double w, double T, double mu, double Neps, double Nnu, const char * integrandFN)
+{
+  double sum = 0.0;
+  FILE* integrandFile;
+  if (integrandFN!=NULL)
+    integrandFile = fopen(integrandFN,"w");
+
+  double k=20.0; 
+  
+  double nu_start = -w-k*T;
+  double nu_end = k*T;
+  double dnu = (nu_end-nu_start) / Nnu; 
+  for (double nu = nu_start; nu < nu_end; nu += dnu )
+  {  
+
+    //---------- ONLY FOR INSULATOR -----------//
+    //if((abs(nu)<0.1)or(abs(nu+w)<0.1))  
+    //  continue;
+    //-----------------------------------------//
+
+
+    //-//
+    complex<double> Sigma_nu=grid->interpl(Sigma,nu);
+    complex<double> Sigma_nu_plus_w=grid->interpl(Sigma,nu+w);
+
+    //-//
+    double eps_center1 = nu+mu-real(Sigma_nu);
+    double eps_start1 = eps_center1  - 65.0*abs(imag(Sigma_nu));
+    double eps_end1   = eps_center1  + 65.0*abs(imag(Sigma_nu));
+
+    if (eps_start1 < -1.0) eps_start1 = -1.0;
+    if (eps_end1 > 1.0)    eps_end1 = 1.0;
+    double deps1 = (eps_end1-eps_start1) / Neps ;
+
+    //-//
+    double eps_center2 = nu+w+mu-real(Sigma_nu_plus_w);
+    double eps_start2 = eps_center2  - 65.0*abs(imag(Sigma_nu_plus_w));
+    double eps_end2   = eps_center2  + 65.0*abs(imag(Sigma_nu_plus_w));
+
+    if (eps_start2 < -1.0) eps_start2 = -1.0;
+    if (eps_end2 > 1.0)    eps_end2 = 1.0;
+    double deps2 = (eps_end2-eps_start2) / Neps ;
+
+    //-// 
+    double eps_start = (deps1<deps2) ? eps_start1 : eps_start2;
+    double eps_end = (deps1<deps2) ? eps_end1 : eps_end2;            
+    double deps = 2.0*( (deps1<deps2) ? deps1 : deps2 );
+    for (double eps = eps_start; eps < eps_end; eps += deps )
+    { 
+      double integrand = getIntegrand( w, T, mu, nu, eps, Sigma_nu, Sigma_nu_plus_w );
       sum += integrand * deps;
-      //fprintf(integrandFile,"%.15le %.15le %.15le %.15le %.15le\n", eps, nu, integrand, rho, (fnu-fnuw)/w);  
+      if (integrandFN!=NULL) fprintf(integrandFile,"%.15le %.15le %.15le\n", eps, nu, integrand /*rho, (fnu-fnuw)/w*/);  
     }
-    //fprintf(integrandFile,"\n");  
+
+    //-// 
+    eps_start = (deps1>=deps2) ? eps_start1 : eps_start2;
+    eps_end = (deps1>=deps2) ? eps_end1 : eps_end2;            
+    deps = 2.0*( (deps1>=deps2) ? deps1 : deps2 );
+    for (double eps = eps_start; eps < eps_end; eps += deps )
+    { 
+      if ( ( eps > ((deps1<deps2) ? eps_start1 : eps_start2)
+           ) 
+            and 
+           ( eps < ((deps1<deps2) ? eps_end1 : eps_end2)
+           ) 
+         )
+        continue;
+      double integrand = getIntegrand( w, T, mu, nu, eps, Sigma_nu, Sigma_nu_plus_w );
+      sum += integrand * deps;
+      if (integrandFN!=NULL) fprintf(integrandFile,"%.15le %.15le %.15le\n", eps, nu, integrand /*rho, (fnu-fnuw)/w*/);  
+    }
+
+    //-//
+    if (integrandFN!=NULL) fprintf(integrandFile,"\n");  
   }
-  //fclose(integrandFile);
+  if (integrandFN!=NULL) fclose(integrandFile);
 
   return 2.0 * pi * sum * dnu ;
 }
@@ -559,6 +592,29 @@ void Result::PrintOnImagAxis(complex<double> * X, int M, double T, const char* F
       g[i] = imag(X[i]) / complex<double>( -omega[i], mf[m] );
     
     IAX[m] = -1/(pi)*TrapezIntegral(N, g, omega);
+  }
+
+  PrintFunc(FN, M, IAX, mf);
+
+  delete [] IAX;
+  delete [] g;
+  delete [] mf;
+}
+
+void Result::PrintCondOnImagAxis(int N, double* X, double* w, int M, double T, const char* FN)
+{ 
+  double* g = new double[N];
+  double* IAX = new double[M];
+  double* mf = new double[M];
+
+  for(int m=0; m<M; m++)
+  { 
+    mf[m]= 2.0*pi*T*(m+1);
+    for(int i=0; i<N; i++)
+      g[i] =            X[i] * mf[m] 
+              /  (  sqr(w[i]) + sqr(mf[m])  );
+    
+    IAX[m] = (2.0/pi)*TrapezIntegral(N, g, w);
   }
 
   PrintFunc(FN, M, IAX, mf);

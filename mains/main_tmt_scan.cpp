@@ -48,12 +48,12 @@ int main(int argc, char* argv[])
             
             InitDOS(DOStypes::SemiCircle, 0.5, grid.get_N(), result.omega, result.NIDOS);
 
-            for(double T=0.07; T>0.009; T -= 0.02)
-            for(double U=1.5; U<3.6; U+=0.5)
+            for(double T=0.05; T>0.009; T -= 0.02)
+            for(double U=1.5; U<4.5; U+=0.5)
             {
 	      InitDelta(DOStypes::SemiCircle, grid.get_N(), 0.5, 0.0, 0.01, 0.5, result.omega, result.Delta);
               
-              for(double W=0.0; W<4.1; W+=0.2)
+              for(double W=3.6; W<=3.61; W+=1000.2)
               {   
                 //InitDelta(DOStypes::SemiCircle, grid.get_N(), 0.5, 0.0, 0.01, 0.5, result.omega, result.Delta);
                 

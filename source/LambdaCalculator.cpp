@@ -146,6 +146,7 @@ void LambdaCalculator::SetNMT(int N, int M, double T)
   this->M = M;
   Initialize();
   SetT(T);
+  printf("LambdaCalculator: N: %d M: %d T: %.3f\n", this->N, this->M, this->T);
 }
 
 void LambdaCalculator::SetOmega(double* omega)
@@ -156,6 +157,7 @@ void LambdaCalculator::SetOmega(double* omega)
 void LambdaCalculator::SetOffset(int offset)
 {
   this->offset = offset;
+  printf("LambdaCalculator: offset: %d\n", this->offset);
 }
 
 void LambdaCalculator::SetLambdasPrinted(int Nlambdas, const int* Nfreqs)
@@ -233,18 +235,18 @@ double LambdaCalculator::CalcLambda(int offset, int Nfreq, int N, complex<double
 }
 
 
-double LambdaCalculator::CalcDiff(int i, int N, complex<double>* X1, complex<double>* X2 )
+double LambdaCalculator::CalcDiff(int offset, int i, int N, complex<double>* X1, complex<double>* X2 )
 {
   if (i<0)
   { double max_diff=0.0;    
-    for(int j =0; j<N; j++)
+    for(int j = offset; j<N; j++)
     { double diff = abs(X2[j]-X1[j]);
       if (diff > max_diff) max_diff=diff;
     }
     return max_diff;
   }
   else
-    return abs(X2[i]-X1[i]);
+    return abs(X2[offset+i]-X1[offset+i]);
 }
 
 void  LambdaCalculator::PrintOut() 
@@ -331,7 +333,7 @@ double LambdaCalculator::CalculateLambda(complex<double>* cX)
     lambdas[i] =  CalcLambda(offset, Nfreqs[i], N, cXw[0], cXw[1], cXw[2]);
 
   for(int i=0; i<Ndiffs; i++)
-    diffs[i] =  CalcDiff(offset+is[i], N, cXw[1], cXw[2]);
+    diffs[i] =  CalcDiff( offset, is[i], N, cXw[1], cXw[2] );
 
   if (DoContinued)
   {
@@ -339,7 +341,7 @@ double LambdaCalculator::CalculateLambda(complex<double>* cX)
       continued_lambdas[i] =  CalcLambda(0, continued_Nfreqs[i], M, cXiw[0], cXiw[1], cXiw[2]);
 
     for(int i=0; i<continued_Ndiffs; i++)
-      continued_diffs[i] =  CalcDiff(continued_is[i], M, cXiw[1], cXiw[2]);
+      continued_diffs[i] =  CalcDiff(0, continued_is[i], M, cXiw[1], cXiw[2]);
   }
 
   PrintOut();

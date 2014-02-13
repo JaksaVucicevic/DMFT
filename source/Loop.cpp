@@ -21,6 +21,7 @@ void Loop::Defaults()
     
     //---- Loop Options -------//
     MAX_ITS = 300;
+    MIN_ITS = 3;
     Accr = 5e-5;
 
     //---- PrintOut/Debugging optins----//
@@ -55,6 +56,7 @@ Loop::Loop(const char* ParamsFN)
   printf("-------- LOOP:: C0 = %d, C1 = %d\n",Coefs[0],Coefs[1]);   
   input.ReadArray(NtoMix, Coefs, "Loop::Coefs");
   input.ReadParam(MAX_ITS,"Loop::MAX_ITS");
+  input.ReadParam(MIN_ITS,"Loop::MIN_ITS");
   input.ReadParam(Accr,"Loop::Accr");
   input.ReadParam(PrintIntermediate,"Loop::PrintIntermediate");
   input.ReadParam(HaltOnIterations,"Loop::HaltOnIterations");
@@ -229,7 +231,7 @@ bool Loop::Run(Result* r)
 
      LC->CalculateLambda(r->Delta);
      
-     if (conv==1) { converged = true; break; }
+     if ((conv==1)and(it>MIN_ITS)) { converged = true; break; }
   }
   //-----------------------------------//
   

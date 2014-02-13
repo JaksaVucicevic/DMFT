@@ -150,10 +150,11 @@ bool Mixer<T>::CheckConvergence()
   CurrentDiff = MaxDiff;
   printf("--- Mixer: Diff[%d] = %le ---\n", Counter, MaxDiff);
 
+/*
   FILE* diffsFile = fopen("diffs","a");
   fprintf(diffsFile,"%le\n", MaxDiff);
   fclose(diffsFile);
-
+*/
   if (MaxDiff < Accr) printf("--- Mixer: CONVERGED !!!\n");
   return  (MaxDiff < Accr);
 }

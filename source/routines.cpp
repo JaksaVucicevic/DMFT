@@ -251,7 +251,7 @@ void ludcmp(double **a, int n, int *indx, double *d)
 	double big,dum,sum,temp;
 	double *vv;
 
-	vv=vector(1,n);
+	vv= new double[n+1];
 	*d=1.0;
 	for (i=1;i<=n;i++) {
 		big=0.0;
@@ -293,7 +293,7 @@ void ludcmp(double **a, int n, int *indx, double *d)
 			for (i=j+1;i<=n;i++) a[i][j] *= dum;
 		}
 	}
-	free_vector(vv,1,n);
+	delete [] vv;
 }
 
 void InvertMatrix(int N, double** A, double** invA, double &det)
@@ -301,7 +301,7 @@ void InvertMatrix(int N, double** A, double** invA, double &det)
   double** a = new double*[N+1];
   for(int i=0; i<N+1; i++) 
   { a[i] = new double[N+1];
-    for(int j=0; j<N+1; j++) a[i][j] = ( (i>0) and (j>0) ) ? M[i-1][j-1] : 0.0; 
+    for(int j=0; j<N+1; j++) a[i][j] = ( (i>0) and (j>0) ) ? A[i-1][j-1] : 0.0; 
   }
 
   double *col = new double[N+1];
@@ -314,7 +314,7 @@ void InvertMatrix(int N, double** A, double** invA, double &det)
     for(i=1;i<=N;i++) col[i]=0.0;
     col[j]=1.0;
     lubksb(a,N,indx,col);
-    for(i=1;i<=N;i++) invM[i-1][j-1]=col[i];
+    for(i=1;i<=N;i++) invA[i-1][j-1]=col[i];
   }
 }
 

@@ -31,6 +31,7 @@ class Loop
 
     //---- Loop Options -------//
     int MAX_ITS;
+    int MIN_ITS;
     double Accr;
 
     //---- PrintOut/Debugging optins----//

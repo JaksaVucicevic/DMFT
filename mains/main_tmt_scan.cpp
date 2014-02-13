@@ -48,12 +48,12 @@ int main(int argc, char* argv[])
             
             InitDOS(DOStypes::SemiCircle, 0.5, grid.get_N(), result.omega, result.NIDOS);
 
-            for(double T=0.05; T>0.009; T -= 0.02)
-            for(double U=1.5; U<4.5; U+=0.5)
+            for(double T=0.05; T<0.06; T += 10000.0)
+            for(double U=0.25; U<=7.1; U+=0.5)
             {
 	      InitDelta(DOStypes::SemiCircle, grid.get_N(), 0.5, 0.0, 0.01, 0.5, result.omega, result.Delta);
               
-              for(double W=3.6; W<=3.61; W+=1000.2)
+              for(double W=0.25; W<=7.1; W+=0.5)
               {   
                 //InitDelta(DOStypes::SemiCircle, grid.get_N(), 0.5, 0.0, 0.01, 0.5, result.omega, result.Delta);
                 
@@ -61,17 +61,20 @@ int main(int argc, char* argv[])
             
                 result.mu0 = 0;
 
-                tmt.SetWDN(W, Distributions::Uniform, (W>0.0) ? (int) (W/0.1) : 1);
+                tmt.SetWDN(W, Distributions::Uniform, (W>0.0) ? 20 + (int) ( ((U>2.8) ? 2.0 : 1.0) * W / 0.1 ) : 1);
                 tmt.SetParams(U, T, 0.5);
 
                 char OFN[300];
-                sprintf(OFN,".U%.3f.T%.3f.W%.3f",U,T,W);             
+                sprintf(OFN,".T%.3f.U%.3f.W%.3f",T,U,W);             
                 tmt.LC->SetOutputFileName(OFN);
-                tmt.LC->SetT(T);
+                tmt.LC->SetNMT(grid.get_N(), 1000, T);
+                //printf("grid.get_N(): %d, half: %d\n",grid.get_N(),grid.get_N()/2) ;
+                //tmt.LC->SetOffset(grid.get_N()/2);
+
                 bool failed = tmt.Run(&result);
 
-                FILE* f = fopen("lambda.UTW","a");
-                fprintf(f, "%.15le %.15le %.15le %.15le\n",tmt.LC->continued_lambdas[0]);
+                FILE* f = fopen("lambdaUW.T0.050","a");
+                fprintf(f, "%.15le %.15le %.15le %.15le\n", U,W, tmt.LC->lambdas[0], tmt.LC->continued_lambdas[0]);
                 fclose(f);
                  
                 if (failed) 

@@ -83,6 +83,6 @@ class LambdaCalculator
     static void ContinueToImagAxis(int N, complex<double>* Xw, double* w, int M, complex<double>* Xiw, double* iw, double T=-1.0, const char* outputFN=NULL);
     static double CalcLambda(int offset, int Nfreq, int N, complex<double>* X0, complex<double>* X1, complex<double>* X2);
                         //use Nfreq frequences starting form X[offset]. if  Nfreq==-1, use all N-offset frequences. 
-    static double CalcDiff(int i, int N, complex<double>* X1, complex<double>* X2 );	//which freq X[i] is used for calculating diff
+    static double CalcDiff(int offset, int i, int N, complex<double>* X1, complex<double>* X2 );	//which freq X[i] is used for calculating diff
 
 };

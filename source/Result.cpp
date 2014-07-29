@@ -269,7 +269,7 @@ double Result::NIConductivity(double T, double mu, int Neps, int Nnu, const char
 
 
 
-double Result::Conductivity(double T, double mu, int Neps, int Nnu, const char * integrandFN)
+double Result::Conductivity(double T, double mu, int Neps, int Nnu, const char * integrandFN, bool excludeSmallOmega)
 //--------------------- DC CONDUCTIVITY --------------------------// Neps,Nnu ~ 400 or 800
 {
   FILE* integrandFile;
@@ -293,8 +293,8 @@ double Result::Conductivity(double T, double mu, int Neps, int Nnu, const char *
   for (double nu = nu_start; nu < nu_end; nu += dnu )
   { 
     //---------- ONLY FOR INSULATOR -----------//
-    //if (abs(nu)<0.1)
-    //  continue;
+    if ((abs(nu)<0.1)and(excludeSmallOmega))
+      continue;
     //-----------------------------------------//
 
     complex<double> Sigma_nu=grid->interpl(Sigma,nu);

@@ -38,6 +38,7 @@ void SIAM::Defaults()
   CheckSpectralWeight = false; //default false
   UseMPT_Bs = false; //default false
   isBethe = false;
+  GfromDelta = false;
 
   UseLatticeSpecificG = false;
   t = 0.5;
@@ -66,6 +67,7 @@ SIAM::SIAM(const char* ParamsFN)
   input.ReadParam(CheckSpectralWeight, "SIAM::CheckSpectralWeight");
   input.ReadParam(UseMPT_Bs,"SIAM::UseMPT_Bs");
   input.ReadParam(isBethe,"SIAM::isBethe");
+  input.ReadParam(GfromDelta,"SIAM::GfromDelta");
   input.ReadParam(UseBroydenFormu0,"SIAM::UseBroydenFormu0");
   input.ReadParam(max_tries,"SIAM::max_tries");
   input.ReadParam(AmoebaScanStart,"SIAM::AmoebaScanStart");
@@ -194,7 +196,7 @@ bool SIAM::Run(Result* r) //output
   delete [] V;
   //----------------------------//
 
-  //output spectral weight if optioned
+  //output spectral weight if opted
   if (CheckSpectralWeight)
   {
     printf("        Spectral weight G: %fe\n", -imag(TrapezIntegralMP(N, r->G, r->omega))/pi);
@@ -209,7 +211,7 @@ bool SIAM::Run(Result* r) //output
   for (int i=0; i<N; i++)
     r->DOS[i] = - imag(r->G[i]) / pi;
 
-  return Clipped;
+  return false;//Clipped;
 }
 
 //========================== RUN SIAM With FIXED n ==============================//
@@ -243,7 +245,12 @@ bool SIAM::Run_CHM(Result* r) //output
     MPT_B0 = 0.0;
     SymmetricCase = true;
   }
-  else mu0 = r->mu0;
+  else
+  { mu0 = r->mu0;
+    MPT_B = 0.0;
+    MPT_B0 = 0.0;
+    SymmetricCase = false;
+  }
 
   //------initial guess---------//
   complex<double>* V = new complex<double>[1];
@@ -255,7 +262,7 @@ bool SIAM::Run_CHM(Result* r) //output
   if (HalfFilling)//and (SymmetricCase))
     get_G0();
   else
-  { 
+  { printf("         SIAM: about to calc mu0. at the moment: mu0 = %.3f mu=%.3f\n",r->mu0, r->mu);
     double initGuesses [] = {-1.0, 1.0, 0.3, -0.3, 0.1, -0.1, 
                              -0.8, 0.8, -0.6, 0.6, -0.7, 0.7,
                              -3.0, 3.0, 0.9, -0.9, 0.05, -0.05, 
@@ -263,14 +270,18 @@ bool SIAM::Run_CHM(Result* r) //output
     
     bool converged = false; 
 
-    for (int i=0; i<sizeof(initGuesses)/sizeof(double); i++)
+    int i;
+    for (i=0; ( (i<sizeof(initGuesses)/sizeof(double)) and (i<max_tries) ); i++)
     {  printf("------ SIAM: trying with init guess: %f\n",real(V[0]));
        converged = UseBroyden<SIAM>(1, 50, 1e-8, &SIAM::get_G0, this, V);  
        if (converged) break;
        else V[0] = initGuesses[i];
     }
-
-
+    if ((i==max_tries)and(!converged))
+    {  V[0] = initGuesses[0]; 
+  
+       Amoeba_CHM(Accr, V); 
+    }
   }
 
   printf("    mu0 = %f\n", mu0);
@@ -316,7 +327,7 @@ bool SIAM::Run_CHM(Result* r) //output
 
   printf("    mu = %f\n", r->mu);
 
-  delete [] V;
+  //delete [] V;
   //-----------------------------------------------------//
 
   //output spectral weight if optioned
@@ -369,6 +380,7 @@ void SIAM::get_G0(complex<double>* V)
   get_G0();
 
   V[0] = mu0 + get_n(r->G0) - r->n;
+  printf("get_G0: V[0] = %.5f\n",real(V[0]));
 } 
 
 
@@ -485,6 +497,7 @@ double SIAM::get_MPT_B()
 
 double SIAM::get_b()
 { //we used mu0 as (mu0 - epsilon - U*n) in G0, now we're correcting that
+  printf("         SIAM::get_b : MPT_B = %.3f, MPT_B0 = %.3f\n",MPT_B, MPT_B0);  
   if (!SymmetricCase)
     return ( (1.0 - 2.0 * r->n) * U - r->mu + (mu0 + epsilon + U * r->n) 
                              - MPT_B0 + MPT_B ) 
@@ -496,7 +509,7 @@ void SIAM::get_Sigma()
 {
  
   if (!SymmetricCase)
-  { //printf("going through asymmetric\n");
+  { printf("going through asymmetric\n");
     double b = get_b();    
     #pragma omp parallel for
     for (int i=0; i<N; i++) 
@@ -505,9 +518,11 @@ void SIAM::get_Sigma()
     
   }
   else
+  { printf("going through symmetric\n");
     #pragma omp parallel for
     for (int i=0; i<N; i++) 
       r->Sigma[i] =  U * r->n + r->SOCSigma[i];
+  }
 
 }
 
@@ -627,9 +642,14 @@ void SIAM::SolveSiam(complex<double>* V)
   get_SOCSigma();
   
   r->n = r->n0; 
-  get_Sigma();   
-  get_G();
 
+  if (GfromDelta)
+  { get_Sigma();   
+    get_G();
+  }
+  else
+    get_G_CHM();
+   
   r->n = get_n(r->G);
   //--------------------//
 
@@ -673,7 +693,7 @@ void SIAM::Amoeba(double accr, complex<double>* V)
        }
       
        double x_res=real(V[0]);
-       printf("         mu0: %.15f n(G0)-n(G): %.2le step: %.2le\n",x, x-x_res, x_step);
+       printf("         mu0: %.15f n(G0)-n(G): %.2le step: %.2le true diff: %.3f n(G): %.3f r->n: %.3f\n",x, x-x_res, x_step, get_n(r->G0)- get_n(r->G),get_n(r->G),r->n);
 
        if (AmoebaForceScanAndPrintOut)
          fprintf(ScanFile,"%.15le %.15le %.15le %.15le\n", x, x-x_res, r->n, r->n0);
@@ -716,7 +736,7 @@ void SIAM::Amoeba(double accr, complex<double>* V)
       V[0] = x;
       SolveSiam(V);
       double x_res=real(V[0]);
-      printf("         it: %d mu0: %.15f n(G0)-n(G): %.2le step: %le\n", it, x, x-x_res, x_step);
+      printf("         it: %d mu0: %.15f n(G0)-n(G): %.2le step: %le n0: %.3f n: %.3f\n", it, x, x-x_res, x_step, get_n(r->G0), get_n(r->G));
       converged = ( abs(x-x_res) < accr );
       int sign = int_sign(x - x_res);
       if (sign_old==sign)
@@ -732,6 +752,99 @@ void SIAM::Amoeba(double accr, complex<double>* V)
 }
 
 
+void SIAM::Amoeba_CHM(double accr, complex<double>* V)
+{
+  //x here stands for mu0
+  
+  double x_start = AmoebaScanStart;
+  double x_end   = AmoebaScanEnd;
+  double x_step  = AmoebaScanStep;
+
+  int sign_old=0;
+  double x;
+  bool found = false;
+  int try_count = 0;
+  double x_candidate;
+  double x_best=0, diff_best=10e+100;
+  
+  while( (not found) and (try_count<1) ) 
+  {
+     FILE* ScanFile;  
+     if (AmoebaForceScanAndPrintOut)
+     {
+       char ScanFN[50];
+       sprintf(ScanFN, "scan.eps%.3f",epsilon);
+       ScanFile = fopen(ScanFN,"w");
+     }
+     for(x=x_start; x<x_end; x+=x_step)
+     {
+       V[0] = x;
+       get_G0(V);
+       
+       if (AmoebaForceScanAndPrintOut)
+       {  char FN[50];
+          sprintf(FN,"siam.eps%.3f.mu0_%.3f",epsilon, mu0);
+          r->PrintResult(FN);
+       }
+      
+       double x_res=real(V[0]);
+       printf("         mu0: %.15f n(G0)-n(G): %.2le step: %.2le true diff: %.3f n(G0): %.3f r->n: %.3f\n",x, x-x_res, x_step, get_n(r->G0)- r->n, get_n(r->G0), r->n);
+
+       if (AmoebaForceScanAndPrintOut)
+         fprintf(ScanFile,"%.15le %.15le %.15le %.15le\n", x, x-x_res, r->n, r->n0);
+
+       if (sign_old==0) 
+       { sign_old = int_sign(x-x_res);
+         continue;
+       }
+
+       int sign = int_sign(x - x_res);
+       if (abs(x-x_res) < diff_best) { x_best=x; diff_best = abs(x-x_res); };
+       if ((sign_old!=sign) and (not found))
+       {  x_candidate = x-x_step;
+          found = true; 
+          if (not AmoebaForceScanAndPrintOut) break; 
+       }
+    }
+    try_count++;
+    if (not found) { x_start *=2.0; x_end *= 2.0; x_step *= 2.0; printf("              mu0 candidate NOT found! now scanning a wider range...\n"); }
+    if (AmoebaForceScanAndPrintOut) fclose(ScanFile);
+  } 
+ 
+  
+  if (not found)
+  {  printf("              mu0 candidate NOT found! setting mu0 to to best choice: mu0_best: %f diff: %.2le\n",x_best,diff_best);
+     V[0] = x_best;
+     get_G0(V);
+  }
+  else
+  {
+    printf("              mu0 candidate found! proceeding with aomeba...\n");  
+    x = x_candidate;
+    x_step *= 0.5;
+    x += x_step;
+
+    bool converged = false;
+    int it = 0;
+    while( (not converged) and (it<=AmoebaMaxIts) )
+    { it ++;
+      V[0] = x;
+      get_G0(V);
+      double x_res=real(V[0]);
+      printf("         it: %d mu0: %.15f n(G0)-n: %.2le step: %le n0: %.3f n: %.3f\n", it, x, x-x_res, x_step, get_n(r->G0), r->n);
+      converged = ( abs(x-x_res) < accr );
+      int sign = int_sign(x - x_res);
+      if (sign_old==sign)
+         x_step = abs(x_step);
+      else
+         x_step = -abs(x_step); 
+      x_step *= 0.5;
+      x += x_step;
+    }
+    if (converged) printf("          Amoeba: desired accuracy reached!\n");
+  }
+  printf("         --- Amoeba DONE ---\n");
+}
 
 //================================= ROUTINES =================================//
 

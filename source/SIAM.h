@@ -36,6 +36,7 @@ class SIAM
     double mu;			//global chemical potential
     double mu0;			//fictious chemical potential
     bool isBethe;		//Set this to true when using bethe lattice specific self-consistency to use simplified expression for G
+    bool GfromDelta;            // affects how G is calculated within SolveSiam function which is called within Run. If true, G = 1/( w+mu-Sigma-Delta )
 
     //----lattice---------//
     bool UseLatticeSpecificG;
@@ -93,6 +94,7 @@ class SIAM
     //--- SIAM solver ---//
     void SolveSiam(complex<double>* V);
     void Amoeba(double accr, complex<double>* V);	//amoeba method for mu0 search. not applicable when MPT corrections are used (TODO: generalize this method)
+    void Amoeba_CHM(double accr, complex<double>* V);
 
     double AmoebaScanStart;	//before amoeba starts, the equation is solved roughly (with accuracy AmobeScanStep) by scanning from AmoebaScanStart to AmoebaScanEnd.
     double AmoebaScanEnd; 	//make sure AmoebaScanStart and AmoebaScanEnd are far enough apart (when U or W is large).

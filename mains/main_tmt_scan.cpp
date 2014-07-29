@@ -49,11 +49,11 @@ int main(int argc, char* argv[])
             InitDOS(DOStypes::SemiCircle, 0.5, grid.get_N(), result.omega, result.NIDOS);
 
             for(double T=0.05; T<0.06; T += 10000.0)
-            for(double U=0.25; U<=7.1; U+=0.5)
+            for(double U=4.25; U<=7.1; U+=0.5)
             {
 	      InitDelta(DOStypes::SemiCircle, grid.get_N(), 0.5, 0.0, 0.01, 0.5, result.omega, result.Delta);
               
-              for(double W=0.25; W<=7.1; W+=0.5)
+              for(double W=0.5; W<=7.1; W+=0.5)
               {   
                 //InitDelta(DOStypes::SemiCircle, grid.get_N(), 0.5, 0.0, 0.01, 0.5, result.omega, result.Delta);
                 

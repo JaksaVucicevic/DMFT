@@ -44,7 +44,7 @@ class Result
     double get_ImGiw1(double T);
     
     double getIntegrand(double w, double T, double mu, double nu, double eps, complex<double> Sigma_nu,complex<double> Sigma_nu_plus_w);
-    double Conductivity(double T, double mu, int Neps, int Nnu, const char * integrandFN = NULL);
+    double Conductivity(double T, double mu, int Neps, int Nnu, const char * integrandFN = NULL, bool excludeSmallOmega = false);
     double Conductivity(double w, double T, double mu, double Neps, double Nnu, const char * integrandFN = NULL);
     double NIConductivity(double T, double mu, int Neps, int Nnu, const char * integrandFN);
     void ChargeSusceptibility(double T, double &chi1, double &chi3);

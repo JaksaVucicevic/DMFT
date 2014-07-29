@@ -18,6 +18,8 @@ class CHM: public Loop
     SIAM* siam;
     double SIAMeta;
     bool UseSmartSIAMeta;
+    bool UseFixedMuSIAMRun;
+     
 
     bool UseBethe;
     int SiamNt;

@@ -16,6 +16,8 @@ void CHM::Defaults()
     UseBethe = false;
     SIAMeta = 1e-5;
     UseSmartSIAMeta = false;
+    UseFixedMuSIAMRun = false;
+
     t = 0.5;
     SiamNt = 8;
     siam = new SIAM();
@@ -42,6 +44,8 @@ CHM::CHM(const char* ParamsFN) : Loop(ParamsFN)
   input.ReadParam(UseBethe,"CHM::UseBethe");
   input.ReadParam(SIAMeta,"CHM::SIAMeta");
   input.ReadParam(UseSmartSIAMeta,"CHM::UseSmartSIAMeta");
+  input.ReadParam(UseFixedMuSIAMRun,"CHM::UseFixedMuSIAMRun");
+
   input.ReadParam(t,"CHM::t");
 
   input.ReadParam(SIAMUseLatticeSpecificG,"CHM::SIAMUseLatticeSpecificG");
@@ -93,18 +97,23 @@ bool CHM::SolveSIAM()
   siam->SetIsBethe(UseBethe);
 
   double eta = SIAMeta;
-  if (UseSmartSIAMeta)
+/*  if (UseSmartSIAMeta)
   { if (Iteration>10)
       eta *= 0.3;
     if (Iteration>20)
       eta *= 0.05;
   }
   siam->SetBroadening(eta);
+*/
   siam->SetUseLatticeSpecificG(SIAMUseLatticeSpecificG, t, LatticeType); 
 #ifdef _OMP
   omp_set_num_threads(SiamNt);
 #endif
-  return siam->Run_CHM(r);
+
+  if (UseFixedMuSIAMRun)
+    return siam->Run(r);
+  else
+    return siam->Run_CHM(r);
 }
 
 void CHM::CalcDelta()

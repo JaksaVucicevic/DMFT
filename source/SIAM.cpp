@@ -38,7 +38,7 @@ void SIAM::Defaults()
   CheckSpectralWeight = false; //default false
   UseMPT_Bs = false; //default false
   isBethe = false;
-  GfromDelta = false;
+  GfromDelta = true;
 
   UseLatticeSpecificG = false;
   t = 0.5;
@@ -68,6 +68,7 @@ SIAM::SIAM(const char* ParamsFN)
   input.ReadParam(UseMPT_Bs,"SIAM::UseMPT_Bs");
   input.ReadParam(isBethe,"SIAM::isBethe");
   input.ReadParam(GfromDelta,"SIAM::GfromDelta");
+  input.ReadParam(UseLatticeSpecificG,"SIAM::UseLatticeSpecificG");
   input.ReadParam(UseBroydenFormu0,"SIAM::UseBroydenFormu0");
   input.ReadParam(max_tries,"SIAM::max_tries");
   input.ReadParam(AmoebaScanStart,"SIAM::AmoebaScanStart");

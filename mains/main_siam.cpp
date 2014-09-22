@@ -13,13 +13,15 @@ int main()
   Result result(&grid);
 
   InitDelta(DOStypes::SemiCircle, grid.get_N(), 0.1, 0.0, 0.01, 0.5, result.omega, result.Delta);
+  InitDOS(DOStypes::SemiCircle, 0.5, grid.get_N(), result.omega, result.NIDOS);
+  result.PrintResult("input.res");
   result.mu = 0;
   
   SIAM siam("params");
   
   siam.Run(&result);
 
-  result.PrintResult("Result.dat");
+  result.PrintResult("output.res");
   
   return 0;
 }

@@ -1,0 +1,117 @@
+# lines that start with "#" are ignored by input reader
+# missing params and params that cannot be read will be initialized to their default values, that are defined in Defaults() functions in each class
+
+#----------------   GRID params   -----------------#
+0		|	GRID::GridType		// type of the omega-grid: 0-LogLin. Nothing else should be use for now
+2000		|	GRID::Nlog		// number of points in the logarithmic part of the grid (should be even)
+2000		|	GRID::Nlin		// number of points in the linear part of the grid (shoulf be even)
+
+6.0		|	GRID::omega_lin_max	// the extension of the grid (it is always symmetric around 0)
+0.3		|	GRID::omega_max		// the extension of the logarithmic part of the grid (it is always symmetric around 0)
+1e-10		|	GRID::omega_min		// the value of points closest to 0 (0.0 is not present in the grid)
+
+#----------------   SIAM params   -----------------#
+2.0		|	SIAM::U			// on-impurity interaction
+0.05		|	SIAM::T			// temperature
+-1.0		|	SIAM::epsilon		// impurity orbital energy
+
+100		|	SIAM::MAX_ITS 		// maximum number of iterations for the Broyden solver that solves the system of 2 equations
+1e-10		|	SIAM::Accr		// desired accuracy for the above process
+
+0.0		|	SIAM::eta		// bradening that is included in calculation of G0
+   
+T		|	SIAM::CheckSpectralWeight	// if this is set to true n and n0 are printed
+F		|	SIAM::UseMPT_Bs			// if this is set to true MPT corrections are used
+F		|	SIAM::isBethe			// this determines the way G is calculated. when just solving siam, should be set to false
+F		|	SIAM::GfromDelta		// this determines the way G is calculated. if true,  G = 1/( w+mu-Sigma-Delta ) otherwise G= int deps rho(eps)/(w+mu-eps-Sigma)
+T		|	SIAM::UseLatticeSpecificG
+
+F		|	SIAM::UseBroydenFormu0		// Use broyden in mu0 search
+2		|	SIAM::max_tries			// number of broyden tries with different initial guesses. If MPT corrections are used, this should be set to 100. Amoeba can not be used with MPT_Bs.
+-4.0		|	SIAM::AmoebaScanStart		// parameters for mu0 scan before amoeba starts
+4.0		|	SIAM::AmoebaScanEnd
+0.2		|	SIAM::AmoebaScanStep
+40		|	SIAM::AmoebaMaxIts
+F		|	SIAM::AmoebaForceScanAndPrintOut
+
+#----------------   Loop params    ----------------#
+F		|	Loop::UseBroyden		// use broyden for aiding DMFT loop convergence
+F		|	Loop::ForceBroyden		// use broyden even if errors occur in SIAM
+5e-6		|	Loop::BroydenStartDiff		// set this to the level of convergence after reaching of which Loop starts using broyden
+
+2		|	Loop::NtoMix			// number of consecutive solutions to mix (ALWAYS >= 2)
+1 0 		|	Loop::Coefs			// the linear coefficients for mixing solutions (newer to older) 
+
+50		|	Loop::MAX_ITS			// maximum number of DMFT loop iterations
+3		|	Loop::MIN_ITS			// min num of dmft it
+1e-6		|	Loop::Accr			// desired accuracy
+
+F		|	Loop::PrintIntermediate		// if this is set to true, after each iteration current result gets printed to a file named "intermediate.<iteration>"
+F		|	Loop::HaltOnIterations		// a debugging option that halts the execution after the first iteration and promts the user for the ordinal of the iteration in which it will halt again
+F		|	Loop::ForceSymmetry
+
+#----------------  CHM params     -----------------#
+0.75		|	CHM::U (overrides SIAM :: U)	// hubbard on-site interaction
+0.008		|	CHM::T (overrides SIAM :: T)	// temperature
+0.25		|	CHM::t 				// hopping amplitude
+
+F		|	CHM::UseBethe (overrides SIAM :: isBethe)	// if set to true, Delta = t^2 G bethe-specific self-consistency realtion is used 
+0.00		|	CHM::SIAMeta (overrides SIAM :: eta)		// sets the broadening for the SIAM object used
+F		|	CHM::UseSmartSIAMeta
+
+F		|	CHM::SIAMUseLatticeSpecificG
+0		| 	CHM::LatticeType
+16		|	CHM::SiamNt
+
+
+#----------------  TMT params  --------------------#
+2.3		|	TMT::W				// disorder (orbital eneries are spread through -W, W
+0		|	TMT::Distribution		// the distribution kind: 0-Uniform, 1-Gaussian (for now, only uniform is implemented)
+40		|	TMT::Nimp			// number of impurities used (orbital energies are equally spaced on -W,W
+T		|	TMT::UseSymmetricTDOS		// if set to true, only negative epsilons are used and symmetry A(epsilon,omega)=A(-epsilon,-omega) is ued in avaraging
+
+8		|	TMT::AverageNt			// the number of threads to be used for averaging (should be set to the number of processors on the master machine)
+8		|	TMT::SiamNt			// the number of threads to be used for SIAM solving (should be set to <the number of processors per machine>/<number of MPI processes per machine>
+8		|	TMT::KramarsKronigNt		// the number of threads to be used for Hilbert transform (should be set to the number of processors on the master machine)
+
+
+#---------  LambdaCalculator params  --------------#
+
+4000		|	LambdaCalculator::N		// the dimension of the input array. This is overridden in Loop to take the value of r->grid->get_N()
+1000		|	LambdaCalculator::M		// the number of matsubara freq for the continuation of the input array to the imaginary axis 
+#		|	LambdaCalculator::T		// temperature (used in calculating matsubara freq)
+	
+#		|	LambdaCalculator::offset	// in case input Green's function is on a symmetric omega grid set this to N/2. In loop this is already done. 
+2		|	LambdaCalculator::Nlambdas	// number of different lambdas to be calculated from the real axis (or whatever the input is)
+1 -1		|	LambdaCalculator::Nfreqs	// the number of frequences used starting from offset+1 for each of the Nlambdas lambdas. if -1, all the N-offset freqs are used.
+4		|	LambdaCalculator::Ndiffs	// number of differences to be calculated from the real axis (or whatever the input is)
+1 2 3 -1	|	LambdaCalculator::is		// the indices of the frequency used for the calculation of Ndiffs differences. if -1, the maximum difference of all is calculated
+
+5		|	LambdaCalculator::continued_Nlambdas	//these parameters are the same as above, but for the function obtained from the continuation of input to the imaginary axis
+1 2 5 20 -1	|	LambdaCalculator::continued_Nfreqs
+7		|	LambdaCalculator::continued_Ndiffs
+1 2 3 4 5 6 -1	|	LambdaCalculator::continued_is
+
+#		|	LambdaCalculator::returned_Nfreq	// these determine what will be returned from LambdaCalculator::CalculateLambda(..)
+#		|	LambdaCalculator::returned_FromContinued
+
+T		|	LambdaCalculator::DoContinued		// do the analytical continuations and calculate lambdas and diffs from the continued functions
+T		|	LambdaCalculator::DoOutput		// output diffs and lambdas in each iteration in files
+F		|	LambdaCalculator::DoPrintOutContinuedX	// output the analytically continued function in each iteration
+
+
+# these params you set your-self for your main program
+#----------------  main params ---------------------#
+0.5		|	main::n
+
+2.55		|	main::Ustart	
+3.3001		|	main::Ustend
+0.025		|	main::Ustep
+
+0.005		|	main::Tstart
+0.021		|	main::Tend
+0.005		|	main::Tstep
+
+0.6		|	main::Wstart
+2.6001		|	main::Wend
+0.5		|	main::Wstep

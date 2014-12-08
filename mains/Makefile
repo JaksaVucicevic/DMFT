@@ -19,7 +19,7 @@ RP = ../bin
 # ----------- THREADED -----------------------------------# 
 
 mpiCC = icpc #/opt/intel/Compiler/11.1/046/bin/intel64/icpc
-FLAGS =  -D_OMP -openmp #-static-intel
+FLAGS =  -D_OMP -openmp #-static
 
 # -----------  HYBRID ------------------------------------#
 

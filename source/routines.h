@@ -26,6 +26,7 @@ double TrapezIntegral(int N, double Y[], double X[]);
 complex<double> TrapezIntegral(int N, complex<double> Y[], double X[]);
 double TrapezIntegralMP(int N, double Y[], double X[]);
 complex<double> TrapezIntegralMP(int N, complex<double> Y[], double X[]);
+double SmartIntegral(int N, double Y[], double X[], double x0, double Dx, double (*f)(double), int Nextra, double x_min, const char* FN = NULL );
 //double TrapezIntegral(std::vector< double > Y, std::vector<double> X);
 complex<double> TrapezIntegral(std::vector< complex<double> > Y, std::vector<double> X);
 double EllipticIntegralFirstKind(double x);

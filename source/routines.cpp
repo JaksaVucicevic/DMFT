@@ -493,23 +493,22 @@ complex<double> TrapezIntegral(int N, complex<double> Y[], double X[])
 
 double TrapezIntegral(int N, double Y[], double X[])
 {
+  double sum0 = Y[0]*(X[1]-X[0]) + Y[N-1]*(X[N-1]-X[N-2]);
   double sum = 0.0;
-  sum += Y[0]*(X[1]-X[0]) + Y[N-1]*(X[N-1]-X[N-2]);
   for (int i=1; i<N-1; i++)
     sum+=Y[i]*(X[i+1]-X[i-1]);
-  return sum*0.5;
+  return sum*0.5 + sum0;
 }
 
 complex<double> TrapezIntegral(int N, complex<double> Y[], double X[])
 {
+  complex<double> sum0 = Y[0]*complex<double>(X[1]-X[0]) +
+                         Y[N-1]*complex<double>(X[N-1]-X[N-2]);
   complex<double> sum = 0.0;
-  sum += Y[0]*complex<double>(X[1]-X[0]) +
-         Y[N-1]*complex<double>(X[N-1]-X[N-2]);
-
   for (int i=1; i<N-1; i++)
     sum+=Y[i]*complex<double>(X[i+1]-X[i-1]);
 
-  return sum*complex<double>(0.5);
+  return sum*0.5 + sum0;
 }
 
 
@@ -536,6 +535,135 @@ complex<double> TrapezIntegral(std::vector< complex<double> > Y, std::vector<dou
 
   return sum*complex<double>(0.5);
 }
+
+double SmartIntegral(int N, double Y[], double X[], double x0, double Dx, double (*f)(double), int Nextra, double x_min, const char* FN)
+{
+  //                      +(xs-xc)Y[i1]                                   +(xc-xe)Y[i3]
+  //    .    .    .         |#####|    .   .        .  |  .    .   .    |===| .    .    .
+  //              i0        xc    xs  i1              x0          i2    xc xe i3   
+  //                               <-------- Dx ------> <-------- Dx ------>
+ 
+  double xs = x0-Dx;
+  double xe = x0+Dx;
+
+  if ( (xs > X[N-1]) or (xe<X[0]) ) return TrapezIntegral(N, Y, X);
+
+  double sum1;
+  if ( (xs>X[0])or(xe<X[N-1]) )
+  { 
+    int i1=N;
+    int i2=N;
+    int i0;
+    int i3;
+
+    if (xs<X[0]) i1=0;
+    double* Ycopy = new double[N];
+    for(int i=0; i<N; i++)
+    { 
+      if (i<N-1)
+      { if ( (X[i]<=xs)and(X[i+1]>xs) )
+        { i0=i;  i1=i+1; }
+        if ( (X[i]<xe)and(X[i+1]>=xe) )
+        { i2=i;  i3=i+1; }
+      }
+
+      if ((i>=i1)and(i<=i2)) 
+      {  Ycopy[i]=0.0;
+         //printf("i: %d, Ycopy=0\n",i);
+      }
+      else 
+        Ycopy[i] = Y[i];
+    }
+    if (FN!=NULL)
+    { char fullFN[300];
+      sprintf(fullFN,"smartIntegral.regular.%s",FN);
+      PrintFunc(fullFN,N,Ycopy,X);
+    }
+    
+    double corr1, corr2;
+    if(i1>0)
+    {  double xc = 0.5*(X[i1]+X[i0]); 
+       double w = xs - xc;
+       corr1 = w * ((w<=0.0) ? Y[i0] : Y[i1]);
+    }
+    else
+      corr1 = 0.0;
+
+    if(i2<N)
+    {  double xc = 0.5*(X[i2]+X[i3]); 
+       double w = xc - xe;
+       corr2 = w * ((w<=0.0) ? Y[i3] : Y[i2]);
+    }
+    else
+      corr2 = 0.0;
+
+    sum1 = TrapezIntegral(N, Ycopy, X) + corr1 + corr2;
+    //printf("corr1: %.6f, corr2: %.6f, sum1: %.6f \n",corr1,corr2, sum1);
+    delete [] Ycopy;
+
+  }
+  else sum1 = 0.0;
+
+
+  double * Xextra = new double [Nextra];
+  double * Yextra = new double [Nextra];
+  
+  GRID grid(Nextra, 0,  Dx+0.1, Dx, x_min);
+  grid.assign_omega(Xextra);
+
+  int i1=0;
+  int i2=Nextra;
+  int i0;
+  int i3;
+
+  for(int i=0; i<Nextra; i++)
+  {  Xextra[i] += x0;
+     if ( (Xextra[i]>=X[0]) and (Xextra[i]<=X[N-1]) )
+       Yextra[i] = f(Xextra[i]); 
+     else
+       Yextra[i] = 0.0; 
+  
+     if (i<Nextra-1)
+     { if ( (Xextra[i]<=X[0])and(Xextra[i+1]+x0>X[0]) )
+       { i0=i;  i1=i+1; }
+       if ( (Xextra[i]<X[N-1])and(Xextra[i+1]+x0>=X[N-1]) )
+       { i2=i;  i3=i+1; 
+         //printf("i2 = %d\n",i);
+       }
+     }
+  }
+  double corr1, corr2;
+  if ((i1>0)and(Xextra[0]!=X[0]) )
+  {  double xc = 0.5*(Xextra[i1]+Xextra[i0]); 
+     double w = xc - X[0];
+     corr1 = w * ((w<=0) ? Yextra[i1] : f(Xextra[i0]));
+  }
+  else
+    corr1 = 0.0;
+
+  if ( (i2<Nextra) and (Xextra[Nextra-1] != X[N-1]) )
+  {  double xc = 0.5*(Xextra[i2]+Xextra[i3]); 
+     double w = X[N-1] - xc;
+     corr2 = w * ((w<=0) ? Yextra[i2] : f(Xextra[i3]));
+  }
+  else
+    corr2 = 0.0;
+
+  double sum2 = TrapezIntegral(Nextra, Yextra, Xextra) + corr1 + corr2;
+  //printf("corr1: %.6f, corr2: %.6f, sum2: %.6f \n",corr1,corr2, sum2);
+  if (FN!=NULL)
+  { char fullFN[300];
+    sprintf(fullFN,"smartIntegral.extra.%s",FN);
+    PrintFunc(fullFN,Nextra,Yextra,Xextra);
+  }
+  
+  delete [] Xextra;
+  delete [] Yextra; 
+
+  return sum1 + sum2; 
+}
+
+
 
 
 
@@ -696,10 +824,13 @@ double DOS(int DOStype, double t, double om, double U)
                        ( ( sqr(2.0*t)>sqr(om+U/2.0) ) ? sqrt( sqr(2.0*t)-sqr(om+U/2.0) ) / ( 4.0*pi*sqr(t) ) : 0.0 );
             } break;
     case DOStypes::SquareLattice:
-           { if (om==0.0) return 100.00;
-             if (abs(om)>=4*t) return 0.0;
-             else return 1.0 / (sqr(pi)*2*t)
-                         * EllipticIntegralFirstKind( sqrt( 1.0-sqr(om/(4*t))) );
+           { if (om==0.0) return 0.0;
+             if (abs(om)>4.0*t) return 0.0;
+             // !!!!!!!!!!!!!!! not good. use smart integral for Kelliptic
+             if (abs(om)>=3.98*t) return (2.0/(4.0*t*sqr(pi)))*( 0.5*pi + pi*( 1.0-sqr(om/(4.0*t)))/8.0 );
+             if (abs(om)<t/2.5) return log( 16.0/(sqr(om/(4.0*t)))) / (sqr(pi)*4.0*t);
+             else return 2.0 / (sqr(pi)*4.0*t)
+                         * EllipticIntegralFirstKind( sqrt( 1.0-sqr(om/(4.0*t))) );
            }  break;
     case DOStypes::CubicLattice:
            {  if (abs(om)>=6*t) return 0.0;

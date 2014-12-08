@@ -44,6 +44,20 @@ GRID::GRID(int Nlog, int Nlin, double omega_lin_max, double omega_max, double om
   this->omega_min = omega_min;
 }
 
+GRID::GRID(int Nlog, int Nlin, int Nedge, double omega_lin_max, double omega_max, double omega_min, double omega_edge)
+{
+  GridType = GridTypes::LogLinEdge;
+  this->Nlog = Nlog;
+  this->Nlin = Nlin;
+  this->Nedge = Nedge;
+  this->N = Nlog+Nlin+Nedge;
+  this->omega_lin_max = omega_lin_max;
+  this->omega_max = omega_max;
+  this->omega_min = omega_min;
+  this->omega_edge = omega_edge;
+}
+
+
 GRID::GRID(double domega_min, double domega_max, double omega_max, double omega_lin_max)
 {
   GridType = GridTypes::Jaksa;
@@ -53,6 +67,8 @@ GRID::GRID(double domega_min, double domega_max, double omega_max, double omega_
   this->domega_max = domega_max;
   this->domega_min = domega_min;
 }
+
+
 
 GRID::GRID(const char* ParamsFN)
 {
@@ -95,6 +111,30 @@ GRID::~GRID()
 
 }
 //======================= Initializers =============================//
+
+double GRID::get_omega(int i, int Nlog, double omega_max,double omega_min)
+{ 
+  int sgn1 = (i >= Nlog/2) ? 1 : -1;
+  i = (i >= Nlog/2) ? i-Nlog/2 : (Nlog/2-1)-i;
+  return   sgn1 * ( exp ( log(omega_min)
+                          + (double)i / (Nlog/2.0-1.0)
+                            * log(omega_max/omega_min) ) ); 
+}
+
+double GRID::get_omega_edge(int i)
+{
+  if ((i<Nedge/2)or(i>=Nedge/2 + Nlog + Nlin))
+  {
+    if (i<Nedge/2)
+      return get_omega(i+Nedge/2, Nedge, omega_edge-omega_lin_max-(get_omega(1)-get_omega(0)), omega_min) - omega_edge;
+    else
+      return get_omega(i-(N-Nedge/2), Nedge, omega_edge-omega_lin_max-(get_omega(1)-get_omega(0)), omega_min) + omega_edge;
+  }
+  else
+    return get_omega(i-Nedge/2);
+
+}
+
 double GRID::get_omega(int i)
 {
   if ((i<Nlin/2)||(i>= Nlin/2 + Nlog))
@@ -160,6 +200,11 @@ void GRID::assign_omega(double* omega)
     { double domega = get_domega();
       for (int i=0; i<N; i++) omega[i] = domega * (i + 0.5) ;
     } break;
+    case GridTypes::LogLinEdge:
+    {
+      for (int i=0; i<N; i++) omega[i] = get_omega_edge(i);
+    } break;
+    
   }
 }
 

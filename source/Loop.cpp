@@ -90,10 +90,10 @@ void Loop::SetGrid(GRID* grid)
 void Loop::SetMixerOptions(int NtoMix, const int * Coefs)
 {
 
-  delete [] Coefs;
+  delete [] this->Coefs;
   this->NtoMix = NtoMix;
   this->Coefs = new int[NtoMix];
-  for (int i=0; i<NtoMix; i++) this->Coefs[i] = Coefs[i];;
+  for (int i=0; i<NtoMix; i++) this->Coefs[i] = Coefs[i];
 }
 
 void Loop::SetBroydenOptions(bool UseBroyden, bool ForceBroyden, double BroydenStartDiff)
@@ -205,7 +205,8 @@ bool Loop::Run(Result* r)
      for (int i = 0; i < N; i++) 
        if ( imag(r->Delta[i]) > 0.0 ) 
        {  ClippingDelta = true;
-          r->Delta[i] = complex<double>( real(r->Delta[i]), -imag(r->Delta[i]) ); 
+          //r->Delta[i] = complex<double>( real(r->Delta[i]), -imag(r->Delta[i]) );
+          //r->Delta[i] = complex<double>( real(r->Delta[i]), imag(r->Delta[i-1]) );  
        }
      if (ClippingDelta) printf("||||||||||||| Clipping Delta!!!!\n");  
      // force symmetry

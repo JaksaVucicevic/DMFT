@@ -38,7 +38,9 @@ void SIAM::Defaults()
   CheckSpectralWeight = false; //default false
   UseMPT_Bs = false; //default false
   isBethe = false;
-  GfromDelta = true;
+  mu0Fixed = false;
+  mu0ismu = false;
+  GfromDelta = false;
 
   UseLatticeSpecificG = false;
   t = 0.5;
@@ -67,6 +69,9 @@ SIAM::SIAM(const char* ParamsFN)
   input.ReadParam(CheckSpectralWeight, "SIAM::CheckSpectralWeight");
   input.ReadParam(UseMPT_Bs,"SIAM::UseMPT_Bs");
   input.ReadParam(isBethe,"SIAM::isBethe");
+  input.ReadParam(mu0Fixed,"SIAM::mu0Fixed");
+  input.ReadParam(mu0ismu,"SIAM::mu0ismu");
+  Setmu0ismu(mu0ismu);
   input.ReadParam(GfromDelta,"SIAM::GfromDelta");
   input.ReadParam(UseLatticeSpecificG,"SIAM::UseLatticeSpecificG");
   input.ReadParam(UseBroydenFormu0,"SIAM::UseBroydenFormu0");
@@ -125,6 +130,16 @@ void SIAM::SetIsBethe(bool isBethe)
   this->isBethe = isBethe;
 }
 
+void SIAM::Setmu0Fixed(bool mu0Fixed)
+{
+  this->mu0Fixed = mu0Fixed;
+}
+
+void SIAM::Setmu0ismu(bool mu0ismu)
+{
+  this->mu0ismu = mu0ismu;
+  if (mu0ismu) mu0Fixed=true;
+}
 void SIAM::SetUseLatticeSpecificG(bool UseLatticeSpecificG, double t, int LatticeType)
 {
   this->UseLatticeSpecificG = UseLatticeSpecificG;
@@ -168,7 +183,7 @@ bool SIAM::Run(Result* r) //output
   double mu0inits [] = {0.0, 1.0, -1.0, -0.8, 2.0, 1.5, -1.5,  2.5, -2.5, 
                         -2.0, 0.05, 0.8, 0.1, -0.1, 0.3, -0.3, 0.5, -0.5, -0.05, 
                         0.4, -0.4, 0.6, -0.6, 2.3, -2.3, 2.8, -2.8, 1.8, -1.8  }; 
-  if (SymmetricCase) 
+  if ((SymmetricCase)or(mu0Fixed)) 
     //mu0 and n are known => there's no solving of system of equations
     SolveSiam(V);
   else 
@@ -253,43 +268,46 @@ bool SIAM::Run_CHM(Result* r) //output
     SymmetricCase = false;
   }
 
-  //------initial guess---------//
   complex<double>* V = new complex<double>[1];
-  V[0] = mu0; //initial guess is always the last mu0. in first DMFT iteration it is 0
-  //---------------------------//
-  if (UseMPT_Bs)  printf("     MPT: B = %fe, B0 = %fe\n", MPT_B, MPT_B0);  
 
-  //----------------- CALCULATION ----------------------//
-  if (HalfFilling)//and (SymmetricCase))
-    get_G0();
-  else
-  { printf("         SIAM: about to calc mu0. at the moment: mu0 = %.3f mu=%.3f\n",r->mu0, r->mu);
-    double initGuesses [] = {-1.0, 1.0, 0.3, -0.3, 0.1, -0.1, 
-                             -0.8, 0.8, -0.6, 0.6, -0.7, 0.7,
-                             -3.0, 3.0, 0.9, -0.9, 0.05, -0.05, 
-                              0.5, -0.5, 0.2, -0.2, 2.0, -2.0};
+  if (not mu0ismu)
+  { //------initial guess---------//
+    V[0] = mu0; //initial guess is always the last mu0. in first DMFT iteration it is 0
+    //---------------------------//
+    if (UseMPT_Bs)  printf("     MPT: B = %fe, B0 = %fe\n", MPT_B, MPT_B0);  
+
+    //----------------- CALCULATION ----------------------//
+    if ((HalfFilling)or(mu0Fixed))//and (SymmetricCase))
+      get_G0();
+    else
+    { printf("         SIAM: about to calc mu0. at the moment: mu0 = %.3f mu=%.3f\n",r->mu0, r->mu);
+      double initGuesses [] = {-1.0, 1.0, 0.3, -0.3, 0.1, -0.1, 
+                               -0.8, 0.8, -0.6, 0.6, -0.7, 0.7,
+                               -3.0, 3.0, 0.9, -0.9, 0.05, -0.05, 
+                                0.5, -0.5, 0.2, -0.2, 2.0, -2.0};
     
-    bool converged = false; 
+      bool converged = false; 
 
-    int i;
-    for (i=0; ( (i<sizeof(initGuesses)/sizeof(double)) and (i<max_tries) ); i++)
-    {  printf("------ SIAM: trying with init guess: %f\n",real(V[0]));
-       converged = UseBroyden<SIAM>(1, 50, 1e-8, &SIAM::get_G0, this, V);  
-       if (converged) break;
-       else V[0] = initGuesses[i];
+      int i;
+      for (i=0; ( (i<sizeof(initGuesses)/sizeof(double)) and (i<max_tries) ); i++)
+      {  printf("------ SIAM: trying with init guess: %f\n",real(V[0]));
+         converged = UseBroyden<SIAM>(1, 50, 1e-8, &SIAM::get_G0, this, V);  
+         if (converged) break;
+         else V[0] = initGuesses[i];
+      }
+      if ((i==max_tries)and(!converged))
+      {  V[0] = initGuesses[0]; 
+    
+         Amoeba_CHM(Accr, V); 
+      }
     }
-    if ((i==max_tries)and(!converged))
-    {  V[0] = initGuesses[0]; 
+    PrintFunc("G0", N, r->G0, r->omega);
+    printf("    mu0 = %f\n", mu0);
   
-       Amoeba_CHM(Accr, V); 
-    }
+    get_As();
+    get_Ps();
+    get_SOCSigma();
   }
-
-  printf("    mu0 = %f\n", mu0);
-  
-  get_As();
-  get_Ps();
-  get_SOCSigma();
 
   V[0] = r->mu;
   
@@ -438,6 +456,62 @@ void SIAM::get_Ps()
   delete [] p2;
 }
 
+/*
+void SIAM::get_Ps()
+{
+  double** p1 = new double*[N];
+  double** p2 = new double*[N];
+
+  #pragma omp parallel for
+  for (int i=N/2; i<N; i++) 
+  {   //go over only positive frequences
+      double* allomega = new double[2*N];
+      p1[i] = new double[2*N];
+      p2[i] = new double[2*N];
+
+      int counter = 0;
+      for (int j=0; j<N; j++)
+        if(r->omega[j]<r->omega[i]/2.0)
+        {
+          allomega[counter] = r->omega[j];
+          p1[i][counter]    = r->Am[j] * grid->interpl(r->Ap, r->omega[j] - r->omega[i]);
+          p2[i][counter]    = r->Ap[j] * grid->interpl(r->Am, r->omega[j] - r->omega[i]);
+          counter++;
+        }
+      for (int j=0; j<N; j++)
+        if(r->omega[j]>=-r->omega[i]/2.0)
+        {
+          allomega[counter]=r->omega[j]+r->omega[i];
+          p1[i][counter]    = r->Ap[j] * grid->interpl(r->Am, r->omega[j] + r->omega[i]);
+          p2[i][counter]    = r->Am[j] * grid->interpl(r->Ap, r->omega[j] + r->omega[i]);
+          counter++;
+        }
+
+      if (i%100==-1) //change this to zero to printout integrands
+      { char p1FN[300];
+        sprintf(p1FN,"p1.w%.3f",r->omega[i]); 
+        PrintFunc(p1FN,counter,p1[i],allomega);
+        char p2FN[300];
+        sprintf(p2FN,"p2.w%.3f",r->omega[i]); 
+        PrintFunc(p2FN,counter,p2[i],allomega);
+      }
+
+      //get Ps by integrating                           
+      r->P1[i] = pi * TrapezIntegral(counter, p1[i], allomega);
+      r->P2[i] = pi * TrapezIntegral(counter, p2[i], allomega);
+      r->P1[N-1-i]=r->P2[i];
+      r->P2[N-1-i]=r->P1[i];
+
+      delete [] p1[i];
+      delete [] p2[i];
+      delete [] allomega;
+  }
+
+  delete [] p1;
+  delete [] p2;
+}
+*/
+
 void SIAM::get_SOCSigma()
 {
     double** s = new double*[N];
@@ -568,7 +642,6 @@ void SIAM::get_G(complex<double>* V)
 
 void SIAM::get_G_CHM()
 { 
-
   get_Sigma();   
   
   if (UseLatticeSpecificG) 
@@ -618,11 +691,20 @@ void SIAM::get_G_CHM()
 
 void SIAM::get_G_CHM(complex<double>* V)
 {
+  
   r->mu = real(V[0]);
+  if(mu0ismu)
+  { mu0 = r->mu;
+    get_G0();
+    get_As();
+    get_Ps();
+    get_SOCSigma();
+  }
 
   get_G_CHM();
 
   V[0] = r->mu + get_n(r->G) - r->n;
+  printf("during broyden mu=%.5f n(G)=%.5f\n",r->mu, get_n(r->G));
 } 
 //------------------------------------------------------//
 

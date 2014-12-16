@@ -46,6 +46,8 @@ class SIAM
     //--don't touch this---//
     bool SymmetricCase;
     bool HalfFilling;
+    bool mu0Fixed;
+    bool mu0ismu;
 
     //-- Broyden solver options--//
     double Accr;
@@ -110,6 +112,8 @@ class SIAM
     void SetBroadening(double eta);
     void SetDOStype_CHM(int DOStype, double t, const char* FileName ="");
     void SetIsBethe(bool isBethe);
+    void Setmu0Fixed(bool mu0Fixed);
+    void Setmu0ismu(bool mu0ismu); //if true, also sets mu0fixed to true
     void SetT(double T);
     void SetU(double U);
     void SetEpsilon(double epsilon);

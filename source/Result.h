@@ -45,9 +45,11 @@ class Result
     
     double getIntegrand(double w, double T, double mu, double nu, double eps, complex<double> Sigma_nu,complex<double> Sigma_nu_plus_w);
     double Conductivity(double T, double mu, int Neps, int Nnu, const char * integrandFN = NULL, bool excludeSmallOmega = false);
+    double TriangularConductivity(double T, int Nkx, int Nky, int Nnu, const char * integrandFN=NULL);
     double Conductivity(double w, double T, double mu, double Neps, double Nnu, const char * integrandFN = NULL);
     double NIConductivity(double T, double mu, int Neps, int Nnu, const char * integrandFN);
     void ChargeSusceptibility(double T, double &chi1, double &chi3);
+    void PrintSpectralFunction(const char* FN, double (*eps)(double, double));
 
   private:
     void Initialize(GRID* grid);

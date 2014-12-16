@@ -97,14 +97,14 @@ bool CHM::SolveSIAM()
   siam->SetIsBethe(UseBethe);
 
   double eta = SIAMeta;
-/*  if (UseSmartSIAMeta)
+  if (UseSmartSIAMeta)
   { if (Iteration>10)
       eta *= 0.3;
     if (Iteration>20)
       eta *= 0.05;
   }
   siam->SetBroadening(eta);
-*/
+
   siam->SetUseLatticeSpecificG(SIAMUseLatticeSpecificG, t, LatticeType); 
 #ifdef _OMP
   omp_set_num_threads(SiamNt);
@@ -128,8 +128,15 @@ void CHM::CalcDelta()
   else    
     #pragma omp parallel for
     for (int i=0; i<N; i++) 
-      r->Delta[i] = r->omega[i] + r->mu - r->Sigma[i] - 1.0/r->G[i];
-
+    {  r->Delta[i] = r->omega[i] + r->mu - r->Sigma[i] - 1.0/r->G[i];
+       //if (imag(r->Delta[i])>0)  r->Delta[i]=r->omega[i] + r->mu - real(r->Sigma[i]) - real(1.0/r->G[i]);
+    }
   r->PrintResult("CHMDeltaOUT");
+
+  if (PrintIntermediate)
+  { char FN[300];
+    sprintf( FN, "CHM.U%.3f.T%.3f.it%d", U, T, Iteration);
+    r->PrintResult(FN);
+  }  
   
 }

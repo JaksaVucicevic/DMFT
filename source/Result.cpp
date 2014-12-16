@@ -5,6 +5,7 @@
 #include "Result.h"
 #include "GRID.h"
 #include "routines.h"
+#include "IBZ.h"
 
 Result::Result(GRID* grid)
 {
@@ -328,6 +329,59 @@ double Result::Conductivity(double T, double mu, int Neps, int Nnu, const char *
 }
 
 
+double Result::TriangularConductivity(double T, int Nkx, int Nky, int Nnu, const char * integrandFN) //bool excludeSmallOmega)
+//--------------------- DC CONDUCTIVITY --------------------------// Neps,Nnu ~ 400 or 800
+{
+  FILE* integrandFile;
+  if (integrandFN!=NULL)
+    integrandFile = fopen(integrandFN,"w");
+
+
+  IBZ ibz(IBZtypes::TriangularLattice, Nkx, Nky );
+  printf("-----ibz ready\n");
+  complex<double> sum = 0.0;
+  
+  double k = 20.0;		//determines the nu range
+
+  double nu_start = -k*T;
+  double nu_end = k*T;
+
+  double dnu = (nu_end-nu_start)/ (double) Nnu;
+ 
+  for (double nu = nu_start; nu < nu_end; nu += dnu )
+  { printf("-- nu: %.3f\n",nu);
+    //---------- ONLY FOR INSULATOR -----------//
+    //if ((abs(nu)<0.1)and(excludeSmallOmega))
+    //  continue;
+    //-----------------------------------------//
+
+    complex<double> Sigma_nu=grid->interpl(Sigma,nu);
+    double fprim = 1.0 / ( 4.0 * T * sqr( cosh( nu/(2.0*T) 
+                                              ) 
+                                        )   
+                           );
+
+    for(int i=0; i<Nkx; i++)
+    for(int j=0; j<Nky; j++)
+    { 
+      double v = ibz.velocity[i][j];
+ 
+      complex<double> G = 1.0/( nu + mu - ibz.epsilon[i][j] - Sigma_nu);
+      double rho = - imag(G) / pi;
+
+      ibz.summand[i][j] = sqr(rho) * sqr(v) * fprim;
+
+      //if (integrandFN!=NULL) fprintf(integrandFile,"%.15le %.15le %.15le %.15le %.15le %.15le\n", eps, nu, integrand, rho, fprim, rho0);  
+    }
+    sum+=ibz.sum();
+
+    if (integrandFN!=NULL) fprintf(integrandFile,"\n");  
+  }
+  if (integrandFN!=NULL) fclose(integrandFile);
+
+  return 2.0 * pi * real(sum) * dnu ;
+}
+
 double Result::getIntegrand(double w, double T, double mu, double nu, double eps, complex<double> Sigma_nu,complex<double> Sigma_nu_plus_w)
 {
       double v = 1.0;//sqrt( (1.0-sqr(eps))/3.0 );
@@ -582,6 +636,44 @@ void Result::ChargeSusceptibility(double T, double &chi1, double &chi3)
   delete [] intg;
 
 }
+
+void Result::PrintSpectralFunction(const char* FN, double (*eps)(double, double))
+{
+  double Kx = 4.0*pi/3.0;
+  double ks [3][2] = {{0,0},{Kx,0},{Kx*3.0/4.0, Kx*sqrt(3.0)/4.0}};
+
+  int N = 100;
+  int Ns [3] = {N, N/2, (int)(N*sqrt(3.0)/2.0)};
+
+  FILE* AFile = fopen(FN,"w");
+  for(double w=-3.0; w<3.0; w+=0.01)
+  { complex<double> Sigma_w=grid->interpl(Sigma,w);
+    int counter = 0;
+    for(int l=0; l<3; l++)
+    { double dkx = ( ks[(l+1==3)?0:(l+1)][0] - ks[l][0] )/((double) Ns[l]);
+      double dky = ( ks[(l+1==3)?0:(l+1)][1] - ks[l][1] )/((double) Ns[l]);
+      for(int i=0; i<Ns[l]; i++)
+      { 
+        double kx = ks[l][0]+i*dkx;
+        double ky = ks[l][1]+i*dky;
+  
+        double A = -(1.0/pi)*imag(1.0/( w + mu - eps(kx,ky) - Sigma_w ));
+        fprintf(AFile,"%d %.15le %.15le\n", counter, w, A);
+        counter++;
+      }
+    }  
+    fprintf(AFile,"\n");  
+  }
+  fclose(AFile);
+}
+
+
+
+
+
+
+
+
 
 void Result::PrintOnImagAxis(complex<double> * X, int M, double T, const char* FN)
 { 

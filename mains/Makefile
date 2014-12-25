@@ -19,7 +19,7 @@ RP = ../bin
 # ----------- THREADED -----------------------------------# 
 
 mpiCC = icpc #/opt/intel/Compiler/11.1/046/bin/intel64/icpc
-FLAGS =  -D_OMP -openmp #-static
+FLAGS =   -openmp -D_OMP -static
 
 # -----------  HYBRID ------------------------------------#
 
@@ -30,8 +30,8 @@ FLAGS =  -D_OMP -openmp #-static
 
 LIBS =# use this if needed 
 
-all : $(OP)/$(main).o $(OP)/TMT.o $(OP)/CHM.o $(OP)/CHM2.o $(OP)/Loop.o $(OP)/SIAM.o $(OP)/SIAM2.o $(OP)/LambdaCalculator.o $(OP)/Result.o $(OP)/GRID.o $(OP)/Input.o $(OP)/Broyden.o $(SP)/Broyden.h $(SP)/Mixer.h $(OP)/routines.o $(OP)/nrutil.o
-	$(mpiCC) $(FLAGS) -o $(RP)/$(main) $(LIBS) $(OP)/$(main).o  $(OP)/TMT.o $(OP)/CHM.o $(OP)/CHM2.o $(OP)/Loop.o $(OP)/SIAM.o $(OP)/SIAM2.o $(OP)/LambdaCalculator.o $(OP)/Result.o $(OP)/GRID.o $(OP)/Input.o $(OP)/Broyden.o $(OP)/routines.o $(OP)/nrutil.o
+all : $(OP)/$(main).o $(OP)/TMT.o $(OP)/CHM.o $(OP)/CHM2.o $(OP)/Loop.o $(OP)/SIAM.o $(OP)/SIAM2.o $(OP)/LambdaCalculator.o $(OP)/Result.o $(OP)/GRID.o $(OP)/Input.o $(OP)/Broyden.o $(OP)/IBZ.o $(SP)/Broyden.h $(SP)/Mixer.h $(OP)/routines.o $(OP)/nrutil.o
+	$(mpiCC) $(FLAGS) -o $(RP)/$(main) $(LIBS) $(OP)/$(main).o  $(OP)/TMT.o $(OP)/CHM.o $(OP)/CHM2.o $(OP)/Loop.o $(OP)/SIAM.o $(OP)/SIAM2.o $(OP)/LambdaCalculator.o $(OP)/Result.o $(OP)/GRID.o $(OP)/Input.o $(OP)/Broyden.o $(OP)/IBZ.o $(OP)/routines.o $(OP)/nrutil.o
 
 # main program
 $(OP)/$(main).o : $(main).cpp $(SP)/TMT.h $(SP)/CHM.h $(SP)/CHM2.h $(SP)/SIAM.h $(SP)/SIAM2.h $(SP)/Result.h $(SP)/GRID.h
@@ -81,6 +81,10 @@ $(OP)/Input.o : $(SP)/Input.cpp $(SP)/Input.h
 # Broyden solver for systems of equations
 $(OP)/Broyden.o : $(SP)/Broyden.h $(SP)/Broyden.cpp
 	$(Cpp) $(FLAGS) -c -o $@ $(SP)/Broyden.cpp
+
+# IBZ
+$(OP)/IBZ.o : $(SP)/IBZ.h $(SP)/IBZ.cpp
+	$(Cpp) $(FLAGS) -c -o $@ $(SP)/IBZ.cpp
 
 # contains some constants and useful numerical routines
 $(OP)/routines.o : $(SP)/routines.cpp $(SP)/routines.h 

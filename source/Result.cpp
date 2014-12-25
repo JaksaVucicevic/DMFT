@@ -307,7 +307,6 @@ double Result::Conductivity(double T, double mu, int Neps, int Nnu, const char *
     double deps = (eps_end-eps_start) / Neps ;
     for (double eps = eps_start; eps < eps_end; eps += deps )
     { 
-      double v = (abs(eps)>=NIDOS_EDGE) ? 0.0 : 1.0;//sqrt( (1.0-sqr(eps))/3.0 );
       double rho0 = (abs(eps)>=NIDOS_EDGE) ? 0.0 : grid->interpl(NIDOS,eps);
  
       complex<double> G = 1.0/( nu + mu - eps - Sigma_nu);
@@ -317,7 +316,7 @@ double Result::Conductivity(double T, double mu, int Neps, int Nnu, const char *
                                           )   
                            );
 
-      double integrand = rho0 * sqr(rho) * sqr(v) * fprim;
+      double integrand = pow(rho0,3.0) * sqr(rho) * fprim; // only for bethe lattice! v = rho
       sum += integrand * deps;
       if (integrandFN!=NULL) fprintf(integrandFile,"%.15le %.15le %.15le %.15le %.15le %.15le\n", eps, nu, integrand, rho, fprim, rho0);  
     }
@@ -668,7 +667,27 @@ void Result::PrintSpectralFunction(const char* FN, double (*eps)(double, double)
 }
 
 
+void Result::PrintFermiSurface(const char* FN, double (*eps)(double, double))
+{
 
+  FILE* AFile = fopen(FN,"w");
+  for(double kx=-4.0*pi/3.0; kx<4.0*pi/3.0; kx+=0.01)
+  { for(double ky=-2.0*pi/sqrt(3.0); ky<2.0*pi/sqrt(3.0); ky+=0.01)
+    {
+      if (     ( ky > (kx+4.0*pi/3.0)*sqrt(3.0) ) 
+            or ( ky > -(kx-4.0*pi/3.0)*sqrt(3.0) ) 
+            or ( ky < -(kx+4.0*pi/3.0)*sqrt(3.0) ) 
+            or ( ky < (kx-4.0*pi/3.0)*sqrt(3.0) )
+         ) continue;
+
+      complex<double> Sigma_0=grid->interpl(Sigma,0.0);
+      double A = -(1.0/pi)*imag(1.0/( mu - eps(kx,ky) - Sigma_0 ));
+      fprintf(AFile,"%.15le %.15le %.15le\n", kx, ky, A);
+    }    
+    fprintf(AFile,"\n");  
+  }
+  fclose(AFile);
+}
 
 
 

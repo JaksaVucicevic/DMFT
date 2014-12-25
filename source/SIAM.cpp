@@ -776,7 +776,8 @@ void SIAM::Amoeba(double accr, complex<double>* V)
        }
       
        double x_res=real(V[0]);
-       printf("         mu0: %.15f n(G0)-n(G): %.2le step: %.2le true diff: %.3f n(G): %.3f r->n: %.3f\n",x, x-x_res, x_step, get_n(r->G0)- get_n(r->G),get_n(r->G),r->n);
+       printf("         mu0: %.15f n(G0)-n(G): %.2le step: %.2le true diff: %.3f n(G): %.3f r->n: %.3f\n",
+                              x, x-x_res, x_step, get_n(r->G0)- get_n(r->G),get_n(r->G),r->n);
 
        if (AmoebaForceScanAndPrintOut)
          fprintf(ScanFile,"%.15le %.15le %.15le %.15le\n", x, x-x_res, r->n, r->n0);

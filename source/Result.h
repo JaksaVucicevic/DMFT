@@ -50,6 +50,7 @@ class Result
     double NIConductivity(double T, double mu, int Neps, int Nnu, const char * integrandFN);
     void ChargeSusceptibility(double T, double &chi1, double &chi3);
     void PrintSpectralFunction(const char* FN, double (*eps)(double, double));
+    void PrintFermiSurface(const char* FN, double (*eps)(double, double));
 
   private:
     void Initialize(GRID* grid);

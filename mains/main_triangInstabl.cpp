@@ -93,7 +93,7 @@ int main(int argc, char* argv[])
 
         complex<double>* dG = new complex<double>[N];
         for(int i=0; i<N; i++)
-          dG[i] = 2.0*((double) N)*(result2.G[i]-result1.G[i])/diff;
+          dG[i] = ((result2.G[i]-result1.G[i])/diff)/(2.0*((double) N));
         sprintf( FN, "dG.U%.3f.T%.3f.it%d", U, T, it+1);
         PrintFunc(FN,N,dG,result1.omega);
       }      

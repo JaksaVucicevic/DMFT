@@ -7,9 +7,13 @@
 
 int main()
 {
-  GRID grid("params");
 
-  int N=grid.get_N();
+  int N=1000;
+  GRID grid(N, 1.5, false);
+  
+  //GRID grid("params");
+  //int N=grid.get_N();
+
   double* omega = new double[N];
   double* dos = new double[N];
 
